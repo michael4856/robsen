@@ -14,8 +14,8 @@ import lombok.Setter;
 public class Tenant {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String tenantId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long tenantId;
 
     private String tenantName;
     private String description;
