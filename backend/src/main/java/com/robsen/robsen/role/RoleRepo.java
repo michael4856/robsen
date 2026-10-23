@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 @Repository 
 public interface RoleRepo  extends JpaRepository<Role, Long>{
     java.util.List<Role> findByActiveTrue();
+    java.util.Optional<Role> findByNameIgnoreCaseAndActiveTrue(String name);
 }

@@ -23,6 +23,10 @@ public class RoleService {
     public Role createRole(Role role) {
         role.setId(null);
         role.setActive(true);
+        validateNavigationItems(role.getNavigationItems());
+        if (role.getNavigationItems() == null) {
+            role.setNavigationItems(List.of());
+        }
         return roleRepo.save(role);
     }
     @Transactional(readOnly = true)
@@ -35,6 +39,10 @@ public class RoleService {
         role.setName(updatedRole.getName());
         role.setDescription(updatedRole.getDescription());
         role.setActive(updatedRole.isActive());
+        validateNavigationItems(updatedRole.getNavigationItems());
+        if (updatedRole.getNavigationItems() != null) {
+            role.setNavigationItems(updatedRole.getNavigationItems());
+        }
         return roleRepo.save(role);
     }
     @Transactional
@@ -47,5 +55,15 @@ public class RoleService {
     @Transactional(readOnly = true)
     public List<Role> getAllActiveRoles() {
         return roleRepo.findByActiveTrue();
+    }
+
+    private void validateNavigationItems(List<String> navigationItems) {
+        if (navigationItems == null) {
+            return;
+        }
+        if (!RoleNavigation.containsOnlySupportedItems(navigationItems)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Role contains an unsupported navigation item.");
+        }
     }
 }
