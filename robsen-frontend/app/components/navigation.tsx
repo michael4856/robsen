@@ -12,13 +12,10 @@ export default function Navigation() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [logoutError, setLogoutError] = useState("");
   const isDashboard = pathname.startsWith("/dashboard");
-  const isAdmin =
-    user?.role.toUpperCase() === "ADMIN" ||
-    user?.role.toUpperCase() === "ROLE_ADMIN";
   const visibleResources = resources.filter(
     (resource) =>
       user?.navigationItems?.includes(resource.key) &&
-      (!resource.adminOnly || isAdmin),
+      (!resource.adminOnly || user?.superAdmin),
   );
 
   useEffect(() => {
@@ -66,6 +63,7 @@ export default function Navigation() {
         {isDashboard ? (
           <div className="navigation-links dashboard-navigation-links">
             <Link href="/dashboard">Overview</Link>
+            {user?.superAdmin ? <Link href="/dashboard/admin">Administration</Link> : null}
             {visibleResources.map((resource) => (
               <Link href={`/dashboard/${resource.key}`} key={resource.key}>
                 {resource.label}
@@ -82,6 +80,7 @@ export default function Navigation() {
 
         {user ? (
           <div className="navigation-account">
+            {user.superAdmin ? <span className="admin-badge">SUPER ADMIN</span> : null}
             <span className="navigation-user">{user.fullName || user.email}</span>
             <button className="navigation-cta" onClick={signOut} type="button">
               Sign out <span aria-hidden="true">↗</span>

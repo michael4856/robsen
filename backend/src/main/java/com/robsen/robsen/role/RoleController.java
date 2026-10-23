@@ -39,6 +39,10 @@ public class RoleController {
      public List<Role> getAllActiveRoles() {
         return roleService.getAllActiveRoles();
      }
+     @GetMapping("/permission-catalog")
+     public List<String> getPermissionCatalog() {
+        return roleService.getPermissionCatalog();
+     }
      @PostMapping({"", "/create"})
      @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.CREATED)
      public Role createRole(@RequestBody Role role){

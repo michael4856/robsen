@@ -35,7 +35,10 @@ export default function ProtectedArea({ children }: { children: ReactNode }) {
           !result ||
           typeof result.role !== "string" ||
           !Array.isArray(result.navigationItems) ||
-          result.navigationItems.some((item) => typeof item !== "string")
+          result.navigationItems.some((item) => typeof item !== "string") ||
+          !Array.isArray(result.permissions) ||
+          result.permissions.some((item) => typeof item !== "string") ||
+          typeof result.superAdmin !== "boolean"
         ) {
           throw new Error("The Robsen API returned an invalid user profile.");
         }

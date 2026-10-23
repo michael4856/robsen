@@ -18,8 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.robsen.robsen.user.User;
 import com.robsen.robsen.user.UserRepo;
 import com.robsen.robsen.user.UserService;
-import com.robsen.robsen.role.Role;
-import com.robsen.robsen.role.RoleRepo;
+import com.robsen.robsen.security.RolePermissionService;
 
 class AuthServiceTest {
     @Test
@@ -37,7 +36,8 @@ class AuthServiceTest {
         when(jwtService.createToken(any(UserDetails.class))).thenReturn("signed-token");
         when(jwtService.getExpirationSeconds()).thenReturn(3600L);
         AuthService authService = new AuthService(
-                userRepo, userService, userDetailsService, passwordEncoder, jwtService, mock(RoleRepo.class));
+                userRepo, userService, userDetailsService, passwordEncoder, jwtService,
+                mock(RolePermissionService.class));
 
         AuthService.AuthResponse response =
                 authService.login(new AuthService.LoginRequest("user@example.com", "password1"));
@@ -57,7 +57,7 @@ class AuthServiceTest {
                 mock(UserDetailsService.class),
                 mock(PasswordEncoder.class),
                 mock(JwtService.class),
-                mock(RoleRepo.class));
+                mock(RolePermissionService.class));
         when(userRepo.findByEmailIgnoreCaseOrUsernameIgnoreCase("missing", "missing"))
                 .thenReturn(Optional.empty());
 
@@ -83,7 +83,7 @@ class AuthServiceTest {
                 mock(UserDetailsService.class),
                 mock(PasswordEncoder.class),
                 mock(JwtService.class),
-                mock(RoleRepo.class));
+                mock(RolePermissionService.class));
 
         AuthService.UserProfile profile = authService.register(new AuthService.RegisterRequest(
                 "Robsen Member", "member@example.com", "member", "password1", null));
@@ -95,23 +95,21 @@ class AuthServiceTest {
     @Test
     void profileUsesNavigationItemsFromAssignedActiveRole() {
         UserRepo userRepo = mock(UserRepo.class);
-        RoleRepo roleRepo = mock(RoleRepo.class);
+        RolePermissionService permissionService = mock(RolePermissionService.class);
         User user = user();
-        user.setRole("MANAGER");
-        Role role = new Role();
-        role.setName("MANAGER");
-        role.setActive(true);
-        role.setNavigationItems(java.util.List.of("products", "opportunities"));
+        when(permissionService.permissionsFor(user))
+                .thenReturn(java.util.List.of("products:READ", "opportunities:READ"));
+        when(permissionService.navigationFor(user)).thenReturn(java.util.List.of("products", "opportunities"));
+        when(permissionService.isSuperAdmin(user)).thenReturn(false);
         when(userRepo.findByEmailIgnoreCaseOrUsernameIgnoreCase("user@example.com", "user@example.com"))
                 .thenReturn(Optional.of(user));
-        when(roleRepo.findByNameIgnoreCaseAndActiveTrue("MANAGER")).thenReturn(Optional.of(role));
         AuthService authService = new AuthService(
                 userRepo,
                 mock(UserService.class),
                 mock(UserDetailsService.class),
                 mock(PasswordEncoder.class),
                 mock(JwtService.class),
-                roleRepo);
+                permissionService);
 
         AuthService.UserProfile profile = authService.getProfile("user@example.com");
 

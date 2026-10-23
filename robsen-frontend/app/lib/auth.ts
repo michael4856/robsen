@@ -9,7 +9,15 @@ export type UserProfile = {
   phoneNumber: string | null;
   active: boolean;
   navigationItems: string[];
+  permissions: string[];
+  superAdmin: boolean;
 };
+
+export function hasPermission(profile: UserProfile | null, permission: string) {
+  return Boolean(
+    profile?.superAdmin || profile?.permissions?.includes(permission),
+  );
+}
 
 export type AuthResponse = {
   accessToken: string;

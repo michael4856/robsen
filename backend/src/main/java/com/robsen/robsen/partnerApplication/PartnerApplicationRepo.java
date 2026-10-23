@@ -10,4 +10,6 @@ public interface PartnerApplicationRepo extends JpaRepository<PartnerApplication
     List<PartnerApplication> findByOpportunityId(Long opportunityId);
     List<PartnerApplication> findByApplicantBusinessId(Long businessId);
     List<PartnerApplication> findByStatus(ApplicationStatus status);
+    List<PartnerApplication> findByApplicantBusinessIdInOrOpportunityBusinessIdIn(
+            java.util.Collection<Long> applicantBusinessIds, java.util.Collection<Long> opportunityBusinessIds);
 }

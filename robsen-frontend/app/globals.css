@@ -126,6 +126,23 @@ a {
   white-space: nowrap;
 }
 
+.admin-badge {
+  padding: 6px 9px;
+  border: 1px solid #d5e7dc;
+  border-radius: 999px;
+  background: #eef7f1;
+  color: #22614b;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+  white-space: nowrap;
+}
+
+.admin-badge-large {
+  padding: 9px 13px;
+  font-size: 10px;
+}
+
 .navigation-cta {
   font-family: inherit;
   cursor: pointer;
@@ -667,6 +684,86 @@ a {
     transform 160ms ease,
     border-color 160ms ease,
     box-shadow 160ms ease;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(225px, 1fr));
+  gap: 15px;
+}
+
+.admin-card,
+.admin-note {
+  padding: 21px;
+  border: 1px solid #e5ece6;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 5px 24px rgba(38, 66, 48, 0.035);
+}
+
+.admin-card {
+  display: flex;
+  min-height: 192px;
+  flex-direction: column;
+  transition: border-color 150ms ease, transform 150ms ease;
+}
+
+.admin-card:hover {
+  transform: translateY(-2px);
+  border-color: #b9d3c2;
+}
+
+.admin-card-count {
+  color: var(--green);
+  font-size: 25px;
+  font-weight: 700;
+}
+
+.admin-card h2,
+.admin-note h2 {
+  margin: 14px 0 7px;
+  font-size: 16px;
+}
+
+.admin-card p,
+.admin-note p {
+  margin: 0 0 17px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.admin-card .resource-card-link {
+  margin-top: auto;
+}
+
+.admin-note {
+  margin-top: 20px;
+}
+
+.admin-note h2 {
+  margin-top: 0;
+}
+
+.permission-help {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.permission-group {
+  padding: 10px 0;
+  border-top: 1px solid #edf1ed;
+}
+
+.permission-group > strong {
+  color: #42594e;
+  font-size: 11px;
+}
+
+.form-error {
+  color: #a24e39;
+  font-size: 11px;
 }
 
 .resource-card:hover {

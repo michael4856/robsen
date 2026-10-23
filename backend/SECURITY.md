@@ -16,16 +16,23 @@ using a browser on another origin.
 "..." }`; the response contains `accessToken`, `tokenType`, `expiresIn`, and a
 safe user profile. Send the token on protected API calls using
 `Authorization: Bearer <accessToken>`. `GET /api/auth/me` returns the signed-in
-profile. Business and distribution endpoints require a valid token. User,
-system-role, and tenant administration additionally require the `ADMIN` role.
+profile. Business and distribution endpoints require a valid token. Platform
+user, business-role, and tenant administration require the `SUPER_ADMIN`
+account role.
 Public registration cannot select or change its role.
 
-Admins can assign users to active roles from the Users page and configure each
-role's visible dashboard sections from the Roles page. The profile endpoint
-returns the assigned role's `navigationItems`, which the frontend uses for
-navigation and page visibility. This is a presentation feature; backend API
-authorization remains authoritative, and user, role, and tenant administration
-still requires `ADMIN`.
+Platform accounts use `USER` or `SUPER_ADMIN`. Business roles are separate:
+users receive business permissions through active business memberships. The
+seeded business roles are `OWNER`, `ADMIN`, `MANAGER`, `SALES_MANAGER`,
+`SALES_REPRESENTATIVE`, `INVENTORY_MANAGER`, `ORDER_MANAGER`,
+`DISTRIBUTION_MANAGER`, `FINANCE_MANAGER`, `STAFF`, and `VIEWER`.
+
+Super admins manage platform users, businesses, memberships, tenants, and
+business roles in `/dashboard/admin`. Role permissions use resource/action
+entries such as `orders:READ` and `orders:UPDATE`; the backend checks both the
+assigned role and the active membership for the affected business. Read access
+is limited to records associated with a user's active business memberships.
+The product and product-category catalogs remain shared across businesses.
 
 To provision an initial administrator automatically, provide these environment
 variables before starting Spring. The password is never stored in source
@@ -39,14 +46,15 @@ export BOOTSTRAP_ADMIN_PASSWORD='use-a-unique-secret-of-at-least-12-chars'
 mvn spring-boot:run
 ```
 
-The account is created only if its email does not already exist; startup will
-not reset an existing account's password or role. Leave
+The account is created if its email does not already exist. If the configured
+email already belongs to an account, startup promotes that account to
+`SUPER_ADMIN` without changing its password. Leave
 `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` unset to disable
 automatic admin creation.
 
 ## Local test administrator
 
-For local development only, the `dev` Spring profile seeds a test administrator
+For local development only, the `dev` Spring profile seeds a test super admin
 in the configured database when `admin@robsen.local` does not already exist:
 
 - Email: `admin@robsen.local`

@@ -6,17 +6,21 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import com.robsen.robsen.security.BusinessAccessService;
 
 @Service
 public class ProductCategoryService {
     private final ProductCategoryRepo categoryRepo;
+    private final BusinessAccessService businessAccess;
 
-    public ProductCategoryService(ProductCategoryRepo categoryRepo) {
+    public ProductCategoryService(ProductCategoryRepo categoryRepo, BusinessAccessService businessAccess) {
         this.categoryRepo = categoryRepo;
+        this.businessAccess = businessAccess;
     }
 
     @Transactional
     public ProductCategory create(ProductCategory category) {
+        requirePlatformAdmin();
         category.setId(null);
         category.setActive(true);
         return categoryRepo.save(category);
@@ -40,6 +44,7 @@ public class ProductCategoryService {
 
     @Transactional
     public ProductCategory update(Long id, ProductCategory input) {
+        requirePlatformAdmin();
         ProductCategory category = get(id);
         category.setName(input.getName());
         category.setDescription(input.getDescription());
@@ -49,8 +54,16 @@ public class ProductCategoryService {
 
     @Transactional
     public void delete(Long id) {
+        requirePlatformAdmin();
         ProductCategory category = get(id);
         category.setActive(false);
         categoryRepo.save(category);
+    }
+
+    private void requirePlatformAdmin() {
+        if (!businessAccess.isSuperAdmin()) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "The shared product category catalog can only be changed by a platform administrator.");
+        }
     }
 }

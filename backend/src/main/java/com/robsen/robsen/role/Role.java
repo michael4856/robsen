@@ -21,4 +21,9 @@ public class Role {
     @CollectionTable(name = "role_navigation_items", joinColumns = @JoinColumn(name = "role_id"))
     @Column(name = "navigation_item", nullable = false)
     private List<String> navigationItems = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "role_permissions", joinColumns = @JoinColumn(name = "role_id"))
+    @Column(name = "permission", nullable = false)
+    private List<String> permissions = new ArrayList<>();
 }

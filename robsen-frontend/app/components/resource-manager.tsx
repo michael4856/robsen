@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import ProtectedArea, { useAuthProfile } from "@/app/components/protected-area";
 import { apiFetch } from "@/app/lib/api-client";
+import { hasPermission } from "@/app/lib/auth";
 import {
   findResource,
   resources,
@@ -35,12 +36,13 @@ export default function ResourceManager({ resourceKey }: { resourceKey: string }
 
 function ResourceContent({ resource }: { resource: ResourceDefinition }) {
   const profile = useAuthProfile();
-  const isAdmin =
-    profile?.role?.toUpperCase() === "ADMIN" ||
-    profile?.role?.toUpperCase() === "ROLE_ADMIN";
   const hasNavigationAccess = profile?.navigationItems?.includes(resource.key) ?? false;
   const canAccessResource =
-    hasNavigationAccess && (!resource.adminOnly || isAdmin);
+    (profile?.superAdmin || hasNavigationAccess) &&
+    (!resource.adminOnly || profile?.superAdmin);
+  const canCreate = hasPermission(profile, `${resource.key}:CREATE`);
+  const canUpdate = hasPermission(profile, `${resource.key}:UPDATE`);
+  const canDelete = hasPermission(profile, `${resource.key}:DELETE`);
   const [records, setRecords] = useState<RecordValue[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -175,9 +177,9 @@ function ResourceContent({ resource }: { resource: ResourceDefinition }) {
             <h1>{resource.label}</h1>
             <p className="dashboard-subtitle">{resource.description}</p>
           </div>
-          <button className="primary-button" onClick={startCreate} type="button">
+          {canCreate ? <button className="primary-button" onClick={startCreate} type="button">
             <span aria-hidden="true">＋</span> Add {resource.singular}
-          </button>
+          </button> : null}
         </div>
 
         {error ? (
@@ -270,7 +272,7 @@ function ResourceContent({ resource }: { resource: ResourceDefinition }) {
                     {resource.columns.map((column) => (
                       <th key={column}>{humanize(column)}</th>
                     ))}
-                    <th aria-label="Actions" />
+                    {canUpdate || canDelete ? <th aria-label="Actions" /> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -279,11 +281,11 @@ function ResourceContent({ resource }: { resource: ResourceDefinition }) {
                       {resource.columns.map((column) => (
                         <td key={column}>{formatValue(record[column])}</td>
                       ))}
-                      <td className="row-actions">
-                        <button onClick={() => startEdit(record)} type="button">
+                      {canUpdate || canDelete ? <td className="row-actions">
+                        {canUpdate ? <button onClick={() => startEdit(record)} type="button">
                           Edit
-                        </button>
-                        {resource.deletable !== false ? (
+                        </button> : null}
+                        {canDelete && resource.deletable !== false ? (
                           <button
                             className="danger-text"
                             onClick={() => void remove(record)}
@@ -292,7 +294,7 @@ function ResourceContent({ resource }: { resource: ResourceDefinition }) {
                             {resource.deleteActionLabel ?? "Delete"}
                           </button>
                         ) : null}
-                      </td>
+                      </td> : null}
                     </tr>
                   ))}
                 </tbody>
@@ -342,6 +344,9 @@ function FieldInput({
         </div>
       </fieldset>
     );
+  }
+  if (kind === "permissions") {
+    return <PermissionInput field={field} onChange={onChange} value={value} />;
   }
   if (kind === "role") {
     return <RoleInput field={field} onChange={onChange} value={value} />;
@@ -456,6 +461,77 @@ function RoleInput({
   );
 }
 
+function PermissionInput({
+  field,
+  value,
+  onChange,
+}: {
+  field: FieldDefinition;
+  value: string | boolean | string[];
+  onChange: (value: string | boolean | string[]) => void;
+}) {
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    apiFetch<unknown>("roles/permission-catalog")
+      .then((result) => {
+        if (!Array.isArray(result) || result.some((item) => typeof item !== "string")) {
+          throw new Error("Permission catalog returned invalid data.");
+        }
+        if (active) setPermissions(result);
+      })
+      .catch((loadError: unknown) => {
+        if (active) {
+          setError(loadError instanceof Error ? loadError.message : "Could not load permissions.");
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const selected = Array.isArray(value) ? value : [];
+  const groups = [...new Set(permissions.map((permission) => permission.split(":")[0]))];
+
+  return (
+    <fieldset className="navigation-permissions">
+      <legend>{field.label}</legend>
+      <p className="permission-help">
+        Permissions are enforced by the API for active business memberships.
+      </p>
+      {error ? <p className="form-error" role="alert">{error}</p> : null}
+      {groups.map((resource) => (
+        <div className="permission-group" key={resource}>
+          <strong>{humanize(resource)}</strong>
+          <div className="navigation-permission-options">
+            {permissions
+              .filter((permission) => permission.startsWith(`${resource}:`))
+              .map((permission) => {
+                const action = permission.split(":")[1];
+                return (
+                  <label className="field-checkbox" key={permission}>
+                    <input
+                      checked={selected.includes(permission)}
+                      onChange={(event) => onChange(
+                        event.target.checked
+                          ? [...selected, permission]
+                          : selected.filter((item) => item !== permission),
+                      )}
+                      type="checkbox"
+                    />
+                    <span>{humanize(action)}</span>
+                  </label>
+                );
+              })}
+          </div>
+        </div>
+      ))}
+    </fieldset>
+  );
+}
+
 function isNamedRoleList(value: unknown): value is Array<{ name: string }> {
   return (
     Array.isArray(value) &&
@@ -473,7 +549,11 @@ function defaultValues(fields: FieldDefinition[]) {
   return Object.fromEntries(
     fields.map((field) => [
       field.name,
-      field.kind === "boolean" ? true : field.kind === "navigation" ? [] : "",
+      field.kind === "boolean"
+        ? true
+        : field.kind === "navigation" || field.kind === "permissions"
+          ? []
+          : "",
     ]),
   );
 }
@@ -492,7 +572,7 @@ function valuesFromRecord(fields: FieldDefinition[], record: RecordValue) {
     const value = record[field.name];
     if (field.kind === "password") {
       values[field.name] = "";
-    } else if (field.kind === "navigation") {
+    } else if (field.kind === "navigation" || field.kind === "permissions") {
       values[field.name] = Array.isArray(value) ? value.map(String) : [];
     } else if (field.kind === "relation") {
       values[field.name] =
@@ -521,7 +601,7 @@ function toRequestBody(
     const value = values[field.name];
     if (field.kind === "boolean") {
       body[field.name] = Boolean(value);
-    } else if (field.kind === "navigation") {
+    } else if (field.kind === "navigation" || field.kind === "permissions") {
       body[field.name] = Array.isArray(value) ? value : [];
     } else if (field.kind === "relation") {
       if (String(value ?? "").trim()) {

@@ -49,8 +49,14 @@ public class BootstrapAdminUser implements CommandLineRunner {
             throw new IllegalStateException("BOOTSTRAP_ADMIN_PASSWORD must be at least 12 characters long.");
         }
 
-        if (userRepo.findByEmailIgnoreCase(email.trim()).isPresent()) {
-            logger.info("Bootstrap admin account already exists; leaving it unchanged.");
+        var existingAdmin = userRepo.findByEmailIgnoreCase(email.trim());
+        if (existingAdmin.isPresent()) {
+            User user = existingAdmin.get();
+            if (!"SUPER_ADMIN".equalsIgnoreCase(user.getRole())) {
+                user.setRole("SUPER_ADMIN");
+                userRepo.save(user);
+            }
+            logger.info("Bootstrap administrator account is configured.");
             return;
         }
 
@@ -59,7 +65,7 @@ public class BootstrapAdminUser implements CommandLineRunner {
         admin.setEmail(email.trim());
         admin.setUsername(username.trim());
         admin.setPassword(password);
-        admin.setRole("ADMIN");
+        admin.setRole("SUPER_ADMIN");
         admin.setActive(true);
         userService.createUser(admin);
         logger.info("Created bootstrap administrator account for {}.", email.trim());

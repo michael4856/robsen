@@ -54,6 +54,7 @@ public class UserService {
         User user = userRepo.findById(id)
                 .orElseThrow(() -> new UserNotFoundException(id));
 
+        protectLastSuperAdmin(user, updatedUser.getRole(), updatedUser.isActive());
         ensureUnique(updatedUser, id);
         user.setFullName(updatedUser.getFullName());
         user.setEmail(updatedUser.getEmail());
@@ -86,9 +87,20 @@ public class UserService {
         User user = userRepo.findById(id)
                 .orElseThrow(() -> new UserNotFoundException(id));
 
+        protectLastSuperAdmin(user, user.getRole(), false);
         user.setActive(false);
         userRepo.save(user);
         return ResponseEntity.noContent().build();
+    }
+
+    private void protectLastSuperAdmin(User current, String nextRole, boolean nextActive) {
+        if (current.isActive()
+                && "SUPER_ADMIN".equalsIgnoreCase(current.getRole())
+                && (!nextActive || !"SUPER_ADMIN".equalsIgnoreCase(nextRole))
+                && userRepo.countByRoleIgnoreCaseAndActiveTrue("SUPER_ADMIN") <= 1) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "The last active platform administrator cannot be removed.");
+        }
     }
 
 }

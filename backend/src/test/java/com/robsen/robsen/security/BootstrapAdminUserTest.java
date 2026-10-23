@@ -22,7 +22,7 @@ class BootstrapAdminUserTest {
     private static final String PASSWORD = "safe-test-password-123";
 
     @Test
-    void persistsAdminWithEncodedPasswordWhenConfiguredAccountDoesNotExist() throws Exception {
+    void persistsSuperAdminWithEncodedPasswordWhenConfiguredAccountDoesNotExist() throws Exception {
         UserRepo userRepo = mock(UserRepo.class);
         UserService userService = new UserService(userRepo, new BCryptPasswordEncoder());
         when(userRepo.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.empty());
@@ -43,7 +43,7 @@ class BootstrapAdminUserTest {
         assertEquals("Robsen Admin", captor.getValue().getFullName());
         assertEquals("admin@example.com", captor.getValue().getEmail());
         assertEquals("admin", captor.getValue().getUsername());
-        assertEquals("ADMIN", captor.getValue().getRole());
+        assertEquals("SUPER_ADMIN", captor.getValue().getRole());
         assertEquals(42L, captor.getValue().getId());
         org.junit.jupiter.api.Assertions.assertTrue(
                 new BCryptPasswordEncoder().matches(PASSWORD, captor.getValue().getPassword()));
@@ -53,14 +53,16 @@ class BootstrapAdminUserTest {
     void doesNotChangeAnExistingAccount() throws Exception {
         UserRepo userRepo = mock(UserRepo.class);
         UserService userService = mock(UserService.class);
-        when(userRepo.findByEmailIgnoreCase("admin@example.com"))
-                .thenReturn(Optional.of(new User()));
+        User existing = new User();
+        existing.setRole("SUPER_ADMIN");
+        when(userRepo.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(existing));
         BootstrapAdminUser bootstrap = new BootstrapAdminUser(
                 userRepo, userService, "admin@example.com", "admin", PASSWORD, "Robsen Admin");
 
         bootstrap.run();
 
         verify(userService, never()).createUser(any(User.class));
+        verify(userRepo, never()).save(any(User.class));
     }
 
     @Test

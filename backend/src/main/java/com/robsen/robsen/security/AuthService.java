@@ -11,9 +11,6 @@ import org.springframework.web.server.ResponseStatusException;
 import com.robsen.robsen.user.User;
 import com.robsen.robsen.user.UserRepo;
 import com.robsen.robsen.user.UserService;
-import com.robsen.robsen.role.Role;
-import com.robsen.robsen.role.RoleNavigation;
-import com.robsen.robsen.role.RoleRepo;
 
 import java.util.List;
 
@@ -24,7 +21,7 @@ public class AuthService {
     private final UserDetailsService userDetailsService;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final RoleRepo roleRepo;
+    private final RolePermissionService rolePermissionService;
 
     public AuthService(
             UserRepo userRepo,
@@ -32,13 +29,13 @@ public class AuthService {
             UserDetailsService userDetailsService,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
-            RoleRepo roleRepo) {
+            RolePermissionService rolePermissionService) {
         this.userRepo = userRepo;
         this.userService = userService;
         this.userDetailsService = userDetailsService;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
-        this.roleRepo = roleRepo;
+        this.rolePermissionService = rolePermissionService;
     }
 
     @Transactional
@@ -96,18 +93,10 @@ public class AuthService {
     }
 
     private UserProfile toProfile(User user) {
-        String roleName = user.getRole() == null ? "" : user.getRole().trim();
-        if (roleName.regionMatches(true, 0, "ROLE_", 0, 5)) {
-            roleName = roleName.substring(5);
-        }
-        String assignedRoleName = roleName;
-        List<String> navigationItems = roleRepo.findByNameIgnoreCaseAndActiveTrue(assignedRoleName)
-                .map(Role::getNavigationItems)
-                .filter(items -> items != null)
-                .orElseGet(() -> "ADMIN".equalsIgnoreCase(assignedRoleName)
-                        ? RoleNavigation.ALL
-                        : RoleNavigation.DEFAULT_USER);
-        return UserProfile.from(user, navigationItems);
+        List<String> navigationItems = rolePermissionService.navigationFor(user);
+        List<String> permissions = rolePermissionService.permissionsFor(user);
+        return UserProfile.from(user, navigationItems, permissions,
+                rolePermissionService.isSuperAdmin(user));
     }
 
     private boolean isBlank(String value) {
@@ -136,8 +125,11 @@ public class AuthService {
             String role,
             String phoneNumber,
             boolean active,
-            List<String> navigationItems) {
-        static UserProfile from(User user, List<String> navigationItems) {
+            List<String> navigationItems,
+            List<String> permissions,
+            boolean superAdmin) {
+        static UserProfile from(
+                User user, List<String> navigationItems, List<String> permissions, boolean superAdmin) {
             return new UserProfile(
                     user.getId(),
                     user.getFullName(),
@@ -146,7 +138,9 @@ public class AuthService {
                     user.getRole(),
                     user.getPhoneNumber(),
                     user.isActive(),
-                    navigationItems);
+                    navigationItems,
+                    permissions,
+                    superAdmin);
         }
     }
 }

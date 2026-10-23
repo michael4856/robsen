@@ -19,14 +19,11 @@ function DashboardContent() {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const isAdmin =
-    profile?.role?.toUpperCase() === "ADMIN" ||
-    profile?.role?.toUpperCase() === "ROLE_ADMIN";
   const navigationItems = profile?.navigationItems;
   const visibleResources = resources.filter(
     (resource) =>
       navigationItems?.includes(resource.key) &&
-      (!resource.adminOnly || isAdmin),
+      (!resource.adminOnly || profile?.superAdmin),
   );
 
   useEffect(() => {
@@ -36,7 +33,7 @@ function DashboardContent() {
         .filter(
           (resource) =>
             navigationItems?.includes(resource.key) &&
-            (!resource.adminOnly || isAdmin),
+            (!resource.adminOnly || profile?.superAdmin),
         )
         .map(async (resource) => {
           const data = await apiFetch<unknown>(resource.listEndpoint);
@@ -64,7 +61,7 @@ function DashboardContent() {
     return () => {
       active = false;
     };
-  }, [isAdmin, navigationItems]);
+  }, [profile?.superAdmin, navigationItems]);
 
   return (
     <main className="dashboard-page">

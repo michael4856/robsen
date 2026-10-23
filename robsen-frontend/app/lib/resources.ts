@@ -9,7 +9,8 @@ export type FieldKind =
   | "relation"
   | "enum"
   | "role"
-  | "navigation";
+  | "navigation"
+  | "permissions";
 
 export type FieldDefinition = {
   name: string;
@@ -75,7 +76,7 @@ export const resources: ResourceDefinition[] = [
       { name: "password", label: "Password", kind: "password", required: true, createOnly: true },
       { name: "password", label: "New password (leave blank to keep current)", kind: "password", updateOnly: true },
       { name: "phoneNumber", label: "Phone" },
-      { name: "role", label: "Role", kind: "role", required: true },
+      { name: "role", label: "Platform access", kind: "enum", options: ["USER", "SUPER_ADMIN"], required: true },
       { name: "active", label: "Active", kind: "boolean" },
     ],
   },
@@ -101,13 +102,13 @@ export const resources: ResourceDefinition[] = [
     singular: "role",
     endpoint: "roles",
     listEndpoint: "roles/all",
-    description: "Assign account roles and configure which sections each role can navigate.",
+    description: "Create business roles and configure their resource-level permissions.",
     adminOnly: true,
-    columns: ["name", "description", "navigationItems", "active"],
+    columns: ["name", "description", "permissions", "active"],
     fields: [
       { name: "name", label: "Name", required: true },
       { name: "description", label: "Description" },
-      { name: "navigationItems", label: "Dashboard access", kind: "navigation" },
+      { name: "permissions", label: "Permissions", kind: "permissions" },
       { name: "active", label: "Active", kind: "boolean" },
     ],
   },
@@ -167,8 +168,9 @@ export const resources: ResourceDefinition[] = [
     endpoint: "territories",
     listEndpoint: "territories",
     description: "Maintain the regions and cities where partners operate.",
-    columns: ["name", "region", "city", "description"],
+    columns: ["business", "name", "region", "city", "description"],
     fields: [
+      { name: "business", label: "Business ID", kind: "relation", required: true },
       { name: "name", label: "Name", required: true },
       { name: "region", label: "Region" },
       { name: "city", label: "City" },
