@@ -23,6 +23,8 @@ public class User {
     private String role;
     private String username;
     private String phoneNumber;
+    @Column(columnDefinition = "TEXT")
+    private String profilePicture;
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
     @Column(nullable = false)

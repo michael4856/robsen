@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -15,6 +16,7 @@ import org.springframework.security.web.access.intercept.RequestAuthorizationCon
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -23,7 +25,30 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfiguration {
     @Bean
     AuthenticationEntryPoint authenticationEntryPoint() {
-        return (request, response, exception) -> response.sendError(401, "Authentication required.");
+        return (request, response, exception) -> {
+            boolean expired = exception != null
+                    && "Invalid or expired bearer token.".equals(exception.getMessage());
+            response.setStatus(401);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setCharacterEncoding("UTF-8");
+            response.getWriter().write(expired
+                    ? "{\"code\":\"SESSION_EXPIRED\","
+                            + "\"message\":\"Your sign-in has expired. Please sign in again to continue.\"}"
+                    : "{\"code\":\"AUTHENTICATION_REQUIRED\","
+                            + "\"message\":\"Authentication is required. Sign in to continue.\"}");
+        };
+    }
+
+    @Bean
+    AccessDeniedHandler accessDeniedHandler() {
+        return (request, response, exception) -> {
+            response.setStatus(403);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setCharacterEncoding("UTF-8");
+            response.getWriter().write(
+                    "{\"code\":\"FORBIDDEN\","
+                            + "\"message\":\"You do not have permission to perform this action.\"}");
+        };
     }
 
     @Bean
@@ -34,7 +59,9 @@ public class SecurityConfiguration {
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(authenticationEntryPoint()))
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(authenticationEntryPoint())
+                        .accessDeniedHandler(accessDeniedHandler()))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register").permitAll()
@@ -44,13 +71,21 @@ public class SecurityConfiguration {
                                 "/api/roles", "/api/roles/**",
                                 "/api/tenants", "/api/tenants/**")
                         .hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/business", "/api/business/create")
+                        .authenticated()
+                        .requestMatchers(
+                                HttpMethod.GET, "/api/business-memberships/invitations")
+                        .authenticated()
+                        .requestMatchers(
+                                HttpMethod.POST, "/api/business-memberships/invitations/*/accept")
+                        .authenticated()
                         .requestMatchers("/api/**").access(dynamicApiAuthorizationManager())
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 
-    private AuthorizationManager<RequestAuthorizationContext> dynamicApiAuthorizationManager() {
+    AuthorizationManager<RequestAuthorizationContext> dynamicApiAuthorizationManager() {
         return (authenticationSupplier, context) -> {
             var authentication = authenticationSupplier.get();
             if (authentication.getAuthorities().stream()
@@ -63,6 +98,9 @@ public class SecurityConfiguration {
             if (resource == null || action == null) {
                 return new AuthorizationDecision(false);
             }
+            if ("memberships".equals(resource)) {
+                return new AuthorizationDecision(authentication.isAuthenticated());
+            }
 
             String permission = "PERMISSION:" + resource + ":" + action;
             boolean granted = authentication.getAuthorities().stream()
@@ -72,6 +110,13 @@ public class SecurityConfiguration {
     }
 
     private String resourceFor(String path) {
+        if (path.equals("/api/product-listings/marketplace")
+                || path.equals("/api/distribution-opportunities/marketplace")) return "memberships";
+        if (path.equals("/api/business/my")) return "memberships";
+        if (path.matches("/api/business/\\d+/dashboard")) return "memberships";
+        if (path.matches("(?i)/api/business/\\d+/roles/MANAGER/permissions(?:/reset)?")) return "memberships";
+        if (path.equals("/api/product-listings/businesses")) return "memberships";
+        if (path.startsWith("/api/products/business/")) return "product-listings";
         if (path.startsWith("/api/business-memberships")) return "memberships";
         if (path.startsWith("/api/product-categories")) return "product-categories";
         if (path.startsWith("/api/product-listings")) return "product-listings";

@@ -2,9 +2,11 @@ package com.robsen.robsen.role;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
+import org.springframework.core.annotation.Order;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
+@Order(1)
 public class RoleBootstrap implements CommandLineRunner {
     private final RoleRepo roleRepo;
 

@@ -7,6 +7,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.robsen.robsen.businessMembership.BusinessMembershipRepo;
 import com.robsen.robsen.common.MembershipStatus;
@@ -17,10 +18,18 @@ import com.robsen.robsen.user.UserRepo;
 public class BusinessAccessService {
     private final BusinessMembershipRepo membershipRepo;
     private final UserRepo userRepo;
+    private final RolePermissionService rolePermissionService;
 
     public BusinessAccessService(BusinessMembershipRepo membershipRepo, UserRepo userRepo) {
+        this(membershipRepo, userRepo, null);
+    }
+
+    @Autowired
+    public BusinessAccessService(
+            BusinessMembershipRepo membershipRepo, UserRepo userRepo, RolePermissionService rolePermissionService) {
         this.membershipRepo = membershipRepo;
         this.userRepo = userRepo;
+        this.rolePermissionService = rolePermissionService;
     }
 
     @Transactional(readOnly = true)
@@ -28,7 +37,7 @@ public class BusinessAccessService {
         if (isSuperAdmin()) {
             return List.of();
         }
-        User user = currentUser();
+        User user = currentUserEntity();
         return membershipRepo.findByUserIdAndStatus(user.getId(), MembershipStatus.ACTIVE).stream()
                 .map(membership -> membership.getBusiness().getId())
                 .distinct()
@@ -43,7 +52,7 @@ public class BusinessAccessService {
         if (isSuperAdmin()) {
             return true;
         }
-        User user = currentUser();
+        User user = currentUserEntity();
         return membershipRepo.findByUserIdAndBusinessIdAndStatus(
                 user.getId(), businessId, MembershipStatus.ACTIVE).isPresent();
     }
@@ -53,10 +62,20 @@ public class BusinessAccessService {
         if (isSuperAdmin()) return true;
         if (businessId == null) return false;
         return membershipRepo.findByUserIdAndBusinessIdAndStatus(
-                        currentUser().getId(), businessId, MembershipStatus.ACTIVE)
-                .map(membership -> membership.getRole())
-                .filter(role -> role != null && role.isActive())
-                .map(role -> role.getPermissions() != null && role.getPermissions().contains(permission))
+                        currentUserEntity().getId(), businessId, MembershipStatus.ACTIVE)
+                .map(membership -> rolePermissionService == null
+                        ? RolePermissionService.hasMembershipPermission(membership, permission)
+                        : rolePermissionService.hasEffectiveMembershipPermission(membership, permission))
+                .orElse(false);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isBusinessOwner(Long businessId) {
+        if (businessId == null || isSuperAdmin()) return false;
+        return membershipRepo.findByUserIdAndBusinessIdAndStatus(
+                        currentUserEntity().getId(), businessId, MembershipStatus.ACTIVE)
+                .map(membership -> membership.getRole() != null
+                        && "OWNER".equalsIgnoreCase(membership.getRole().getName()))
                 .orElse(false);
     }
 
@@ -79,10 +98,10 @@ public class BusinessAccessService {
     }
 
     public Long currentUserId() {
-        return currentUser().getId();
+        return currentUserEntity().getId();
     }
 
-    private User currentUser() {
+    public User currentUserEntity() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new AccessDeniedException("Authentication required.");

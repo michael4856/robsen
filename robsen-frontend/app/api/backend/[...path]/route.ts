@@ -15,7 +15,10 @@ async function proxy(request: Request, context: RouteContext) {
   const cookieStore = await cookies();
   const token = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
   if (!token) {
-    return Response.json({ message: "Your session has expired. Sign in again." }, { status: 401 });
+    return Response.json(
+      { code: "AUTH_REQUIRED", message: "Sign in to continue." },
+      { status: 401 },
+    );
   }
 
   const { path } = await context.params;
@@ -38,8 +41,16 @@ async function proxy(request: Request, context: RouteContext) {
 
   if (response.status === 401) {
     cookieStore.delete(ACCESS_TOKEN_COOKIE);
+    const result = (await response.json().catch(() => null)) as
+      | { code?: string; message?: string }
+      | null;
     return Response.json(
-      { message: "Your session has expired. Sign in again." },
+      {
+        code: result?.code ?? "SESSION_EXPIRED",
+        message:
+          result?.message ??
+          "Your sign-in has expired. Please sign in again to continue.",
+      },
       { status: 401 },
     );
   }

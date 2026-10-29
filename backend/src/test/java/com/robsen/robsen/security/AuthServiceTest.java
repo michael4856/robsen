@@ -49,6 +49,29 @@ class AuthServiceTest {
     }
 
     @Test
+    void refreshIssuesAReplacementBearerTokenForAnActiveUser() {
+        UserRepo userRepo = mock(UserRepo.class);
+        UserDetailsService userDetailsService = mock(UserDetailsService.class);
+        JwtService jwtService = mock(JwtService.class);
+        UserDetails userDetails = mock(UserDetails.class);
+        User user = user();
+        when(userDetailsService.loadUserByUsername("user@example.com")).thenReturn(userDetails);
+        when(userDetails.isEnabled()).thenReturn(true);
+        when(userRepo.findByEmailIgnoreCaseOrUsernameIgnoreCase("user@example.com", "user@example.com"))
+                .thenReturn(Optional.of(user));
+        when(jwtService.createToken(userDetails)).thenReturn("renewed-token");
+        when(jwtService.getExpirationSeconds()).thenReturn(28800L);
+        AuthService authService = new AuthService(
+                userRepo, mock(UserService.class), userDetailsService,
+                mock(PasswordEncoder.class), jwtService, mock(RolePermissionService.class));
+
+        AuthService.AuthResponse response = authService.refresh("user@example.com");
+
+        assertEquals("renewed-token", response.accessToken());
+        assertEquals(28800L, response.expiresIn());
+    }
+
+    @Test
     void loginRejectsInvalidCredentialsWithUnauthorizedStatus() {
         UserRepo userRepo = mock(UserRepo.class);
         AuthService authService = new AuthService(

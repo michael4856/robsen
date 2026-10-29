@@ -21,9 +21,7 @@ public final class RolePermissions {
         List<String> permissions = new ArrayList<>();
         for (String resource : RESOURCES) {
             for (String action : ACTIONS) {
-                if ((Set.of("products", "product-categories").contains(resource) && !action.equals("READ"))
-                        || (resource.equals("businesses")
-                                && Set.of("CREATE", "DELETE").contains(action))) {
+                if (resource.equals("businesses") && Set.of("CREATE", "DELETE").contains(action)) {
                     continue;
                 }
                 permissions.add(permission(resource, action));

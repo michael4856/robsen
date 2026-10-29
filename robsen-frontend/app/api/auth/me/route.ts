@@ -6,7 +6,10 @@ export async function GET() {
   const cookieStore = await cookies();
   const token = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
   if (!token) {
-    return Response.json({ message: "You are not signed in." }, { status: 401 });
+    return Response.json(
+      { code: "AUTH_REQUIRED", message: "Sign in to continue." },
+      { status: 401 },
+    );
   }
 
   const response = await forwardBackendResponse("/api/auth/me", {
@@ -14,7 +17,18 @@ export async function GET() {
   });
   if (response.status === 401) {
     cookieStore.delete(ACCESS_TOKEN_COOKIE);
-    return Response.json({ message: "Your session has expired. Sign in again." }, { status: 401 });
+    const result = (await response.json().catch(() => null)) as
+      | { code?: string; message?: string }
+      | null;
+    return Response.json(
+      {
+        code: result?.code ?? "SESSION_EXPIRED",
+        message:
+          result?.message ??
+          "Your sign-in has expired. Please sign in again to continue.",
+      },
+      { status: 401 },
+    );
   }
   return response;
 }

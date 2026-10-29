@@ -10,21 +10,52 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.robsen.robsen.common.ApplicationStatus;
 import com.robsen.robsen.security.BusinessAccessService;
+import com.robsen.robsen.distributionOpportunity.DistributionOpportiunity;
+import com.robsen.robsen.distributionOpportunity.DistributionOpportunityRepo;
+import com.robsen.robsen.business.BusinessRepo;
 
 @Service
 public class PartnerApplicationService {
     private final PartnerApplicationRepo applicationRepo;
     private final BusinessAccessService businessAccess;
+    private final DistributionOpportunityRepo opportunityRepo;
+    private final BusinessRepo businessRepo;
 
-    public PartnerApplicationService(PartnerApplicationRepo applicationRepo, BusinessAccessService businessAccess) {
+    public PartnerApplicationService(
+            PartnerApplicationRepo applicationRepo,
+            BusinessAccessService businessAccess,
+            DistributionOpportunityRepo opportunityRepo,
+            BusinessRepo businessRepo) {
         this.applicationRepo = applicationRepo;
         this.businessAccess = businessAccess;
+        this.opportunityRepo = opportunityRepo;
+        this.businessRepo = businessRepo;
     }
 
     @Transactional
     public PartnerApplication create(PartnerApplication application) {
+        if (application.getApplicantBusiness() == null || application.getApplicantBusiness().getId() == null
+                || application.getOpportunity() == null || application.getOpportunity().getId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "An opportunity and applicant business are required.");
+        }
         application.setId(null);
-        businessAccess.requireAccess(application.getApplicantBusiness().getId(), "partner-applications:CREATE");
+        Long applicantBusinessId = application.getApplicantBusiness().getId();
+        businessAccess.requireAccess(applicantBusinessId, "partner-applications:CREATE");
+        DistributionOpportiunity opportunity = opportunityRepo.findById(application.getOpportunity().getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Opportunity not found."));
+        if (!"OPEN".equalsIgnoreCase(opportunity.getStatus())
+                || (opportunity.getExpiresAt() != null && !opportunity.getExpiresAt().isAfter(LocalDateTime.now()))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This opportunity is not accepting applications.");
+        }
+        if (opportunity.getBusiness().getId().equals(applicantBusinessId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A business cannot apply to its own opportunity.");
+        }
+        if (applicationRepo.existsByOpportunityIdAndApplicantBusinessId(opportunity.getId(), applicantBusinessId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This business has already applied to the opportunity.");
+        }
+        application.setApplicantBusiness(businessRepo.findById(applicantBusinessId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Applicant business not found.")));
+        application.setOpportunity(opportunity);
         application.setStatus(ApplicationStatus.PENDING);
         application.setReviewedAt(null);
         return applicationRepo.save(application);
@@ -69,31 +100,14 @@ public class PartnerApplicationService {
     @Transactional
     public PartnerApplication update(Long id, PartnerApplication input) {
         PartnerApplication application = get(id);
-        if (!businessAccess.canAccess(
-                        application.getApplicantBusiness().getId(), "partner-applications:UPDATE")
-                && !businessAccess.canAccess(
-                        application.getOpportunity().getBusiness().getId(), "partner-applications:UPDATE")) {
-            throw new org.springframework.security.access.AccessDeniedException(
-                    "Your business role does not grant partner application updates.");
+        businessAccess.requireAccess(application.getApplicantBusiness().getId(), "partner-applications:UPDATE");
+        if (application.getStatus() != ApplicationStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only pending applications can be changed.");
         }
-        if (!application.getApplicantBusiness().getId().equals(input.getApplicantBusiness().getId())) {
-            businessAccess.requireAccess(input.getApplicantBusiness().getId(), "partner-applications:UPDATE");
-        }
-        if (!application.getOpportunity().getBusiness().getId()
-                .equals(input.getOpportunity().getBusiness().getId())) {
-            businessAccess.requireAccess(input.getOpportunity().getBusiness().getId(), "partner-applications:UPDATE");
-        }
-        if (!businessAccess.canAccess(input.getApplicantBusiness().getId(), "partner-applications:UPDATE")
-                && !businessAccess.canAccess(
-                        input.getOpportunity().getBusiness().getId(), "partner-applications:UPDATE")) {
-            throw new org.springframework.security.access.AccessDeniedException(
-                    "The application must remain associated with an accessible business.");
-        }
-        application.setOpportunity(input.getOpportunity());
-        application.setApplicantBusiness(input.getApplicantBusiness());
         application.setMessage(input.getMessage());
-        application.setStatus(input.getStatus());
-        application.setReviewedAt(input.getReviewedAt());
+        if (input.getStatus() == ApplicationStatus.WITHDRAWN) {
+            application.setStatus(ApplicationStatus.WITHDRAWN);
+        }
         return applicationRepo.save(application);
     }
 
@@ -103,11 +117,18 @@ public class PartnerApplicationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A review status must be selected");
         }
         PartnerApplication application = get(id);
-        if (!businessAccess.canAccess(application.getApplicantBusiness().getId(), "partner-applications:UPDATE")
-                && !businessAccess.canAccess(
-                        application.getOpportunity().getBusiness().getId(), "partner-applications:UPDATE")) {
-            throw new org.springframework.security.access.AccessDeniedException(
-                    "Your business role does not grant partner application updates.");
+        businessAccess.requireAccess(application.getOpportunity().getBusiness().getId(), "partner-applications:UPDATE");
+        if (application.getStatus() == ApplicationStatus.WITHDRAWN
+                || application.getStatus() == ApplicationStatus.APPROVED
+                || application.getStatus() == ApplicationStatus.REJECTED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This application has already been decided or withdrawn.");
+        }
+        if (status == ApplicationStatus.WITHDRAWN || status == ApplicationStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose an application review decision.");
+        }
+        if (!List.of(ApplicationStatus.UNDER_REVIEW, ApplicationStatus.APPROVED, ApplicationStatus.REJECTED)
+                .contains(status)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported application review decision.");
         }
         application.setStatus(status);
         application.setReviewedAt(LocalDateTime.now());
@@ -128,4 +149,5 @@ public class PartnerApplicationService {
                 || businessAccess.canAccess(
                         application.getOpportunity().getBusiness().getId(), "partner-applications:READ");
     }
+
 }

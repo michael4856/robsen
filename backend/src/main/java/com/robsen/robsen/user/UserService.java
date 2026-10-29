@@ -82,6 +82,16 @@ public class UserService {
         }
     }
 
+    public void ensureProfileIdentityAvailable(User user, Long excludedId) {
+        boolean emailTaken = user.getEmail() != null && userRepo.findByEmailIgnoreCase(user.getEmail())
+                .filter(existing -> !existing.getId().equals(excludedId)).isPresent();
+        boolean usernameTaken = user.getUsername() != null && userRepo.findByUsernameIgnoreCase(user.getUsername())
+                .filter(existing -> !existing.getId().equals(excludedId)).isPresent();
+        if (emailTaken || usernameTaken) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email or username is already registered");
+        }
+    }
+
     @Transactional
     public ResponseEntity<Void> deleteUser(Long id) {
         User user = userRepo.findById(id)

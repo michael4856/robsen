@@ -20,7 +20,8 @@ public class ProductCategoryService {
 
     @Transactional
     public ProductCategory create(ProductCategory category) {
-        requirePlatformAdmin();
+        if (category.getBusiness() == null || category.getBusiness().getId() == null) requirePlatformAdmin();
+        else businessAccess.requireAccess(category.getBusiness().getId(), "product-categories:CREATE");
         category.setId(null);
         category.setActive(true);
         return categoryRepo.save(category);
@@ -42,10 +43,25 @@ public class ProductCategoryService {
         return categoryRepo.findByActiveTrue();
     }
 
+    @Transactional(readOnly = true)
+    public List<ProductCategory> getForBusiness(Long businessId) {
+        businessAccess.requireAccess(businessId, "product-categories:READ");
+        java.util.LinkedHashMap<Long, ProductCategory> categories = new java.util.LinkedHashMap<>();
+        categoryRepo.findByBusinessIsNullAndActiveTrue().forEach(category -> categories.put(category.getId(), category));
+        categoryRepo.findByBusinessIdAndActiveTrue(businessId).forEach(category -> categories.put(category.getId(), category));
+        return List.copyOf(categories.values());
+    }
+
     @Transactional
     public ProductCategory update(Long id, ProductCategory input) {
-        requirePlatformAdmin();
         ProductCategory category = get(id);
+        if (category.getBusiness() == null) requirePlatformAdmin();
+        else {
+            businessAccess.requireAccess(category.getBusiness().getId(), "product-categories:UPDATE");
+            if (input.getBusiness() != null && input.getBusiness().getId() != null
+                    && !input.getBusiness().getId().equals(category.getBusiness().getId()))
+                throw new org.springframework.security.access.AccessDeniedException("A category cannot be moved to another business.");
+        }
         category.setName(input.getName());
         category.setDescription(input.getDescription());
         category.setActive(input.isActive());

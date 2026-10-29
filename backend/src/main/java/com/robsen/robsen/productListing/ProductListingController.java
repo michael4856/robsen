@@ -35,9 +35,19 @@ public class ProductListingController {
         return listingService.getActive();
     }
 
+    @GetMapping("/marketplace")
+    public List<ProductListingService.MarketplaceListing> getMarketplace() {
+        return listingService.getMarketplace();
+    }
+
     @GetMapping("/business/{businessId}")
     public List<ProductListing> getByBusiness(@PathVariable Long businessId) {
         return listingService.getByBusiness(businessId);
+    }
+
+    @GetMapping("/businesses")
+    public List<ProductListingService.BusinessOption> getBusinessesWithReadableListings() {
+        return listingService.getBusinessesWithReadableListings();
     }
 
     @PutMapping("/{id}")

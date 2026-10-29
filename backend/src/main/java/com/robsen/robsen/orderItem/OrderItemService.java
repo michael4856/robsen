@@ -10,27 +10,50 @@ import org.springframework.web.server.ResponseStatusException;
 import com.robsen.robsen.security.BusinessAccessService;
 import com.robsen.robsen.customerOrder.CustomerOrder;
 import com.robsen.robsen.customerOrder.CustomerOrderRepo;
+import com.robsen.robsen.productListing.ProductListing;
+import com.robsen.robsen.productListing.ProductListingRepo;
 
 @Service
 public class OrderItemService {
     private final OrderItemRepo orderItemRepo;
     private final CustomerOrderRepo orderRepo;
     private final BusinessAccessService businessAccess;
+    private final ProductListingRepo listingRepo;
 
     public OrderItemService(
-            OrderItemRepo orderItemRepo, CustomerOrderRepo orderRepo, BusinessAccessService businessAccess) {
+            OrderItemRepo orderItemRepo,
+            CustomerOrderRepo orderRepo,
+            BusinessAccessService businessAccess,
+            ProductListingRepo listingRepo) {
         this.orderItemRepo = orderItemRepo;
         this.orderRepo = orderRepo;
         this.businessAccess = businessAccess;
+        this.listingRepo = listingRepo;
     }
 
     @Transactional
     public OrderItem create(OrderItem item) {
-        validateItem(item);
-        validateOrderListing(item, "order-items:CREATE");
-        item.setId(null);
-        item.setLineTotal(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
-        return orderItemRepo.save(item);
+        if (item.getOrder() == null || item.getOrder().getId() == null
+                || item.getProductListing() == null || item.getProductListing().getId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order and product listing are required.");
+        }
+        CustomerOrder order = findOrder(item.getOrder().getId());
+        requireBuyer(order, "orders:CREATE");
+        requireOrderPending(order);
+        ProductListing listing = findListingForUpdate(item.getProductListing().getId());
+        validateAvailableListing(order, listing, item.getQuantity());
+        listing.setAvailableQuantity(listing.getAvailableQuantity() - item.getQuantity());
+        listingRepo.save(listing);
+
+        OrderItem saved = new OrderItem();
+        saved.setOrder(order);
+        saved.setProductListing(listing);
+        saved.setQuantity(item.getQuantity());
+        saved.setUnitPrice(listing.getWholesalePrice());
+        saved.setLineTotal(listing.getWholesalePrice().multiply(BigDecimal.valueOf(item.getQuantity())));
+        OrderItem result = orderItemRepo.save(saved);
+        recalculateSubtotal(order);
+        return result;
     }
 
     @Transactional(readOnly = true)
@@ -53,57 +76,78 @@ public class OrderItemService {
 
     @Transactional(readOnly = true)
     public List<OrderItem> getByOrder(Long orderId) {
-        requireOrderVisible(orderId, "order-items:READ");
+        CustomerOrder order = findOrder(orderId);
+        requireOrderVisible(order, "order-items:READ");
         return orderItemRepo.findByOrderId(orderId);
     }
 
     @Transactional
     public OrderItem update(Long id, OrderItem input) {
-        validateItem(input);
         OrderItem item = get(id);
-        requireOrderVisible(item, "order-items:UPDATE");
-        validateOrderListing(input, "order-items:UPDATE");
-        item.setOrder(input.getOrder());
-        item.setProductListing(input.getProductListing());
+        requireBuyer(item.getOrder(), "orders:UPDATE");
+        requireOrderPending(item.getOrder());
+        if (input.getQuantity() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantity must be greater than zero.");
+        }
+        ProductListing listing = findListingForUpdate(item.getProductListing().getId());
+        if (input.getQuantity() < listing.getMinimumOrderQuantity()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantity is below the listing minimum.");
+        }
+        int additional = input.getQuantity() - item.getQuantity();
+        if (additional > listing.getAvailableQuantity()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Not enough quantity is available.");
+        }
+        listing.setAvailableQuantity(listing.getAvailableQuantity() - additional);
+        listingRepo.save(listing);
         item.setQuantity(input.getQuantity());
-        item.setUnitPrice(input.getUnitPrice());
-        item.setLineTotal(input.getUnitPrice().multiply(BigDecimal.valueOf(input.getQuantity())));
-        return orderItemRepo.save(item);
+        item.setUnitPrice(listing.getWholesalePrice());
+        item.setLineTotal(listing.getWholesalePrice().multiply(BigDecimal.valueOf(input.getQuantity())));
+        OrderItem saved = orderItemRepo.save(item);
+        recalculateSubtotal(item.getOrder());
+        return saved;
     }
 
     @Transactional
     public void delete(Long id) {
         OrderItem item = get(id);
-        requireOrderVisible(item, "order-items:DELETE");
+        requireBuyer(item.getOrder(), "orders:UPDATE");
+        requireOrderPending(item.getOrder());
+        ProductListing listing = findListingForUpdate(item.getProductListing().getId());
+        listing.setAvailableQuantity(listing.getAvailableQuantity() + item.getQuantity());
+        listingRepo.save(listing);
         orderItemRepo.delete(item);
+        recalculateSubtotal(item.getOrder());
     }
 
-    private void validateOrderListing(OrderItem item, String permission) {
-        if (item.getOrder() == null || item.getProductListing() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order and product listing are required.");
+    private void validateAvailableListing(CustomerOrder order, ProductListing listing, int quantity) {
+        if (quantity <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantity must be greater than zero.");
         }
-        requireOrderVisible(item.getOrder().getId(), permission);
-        Long supplierBusinessId = item.getOrder().getSupplierBusiness().getId();
-        if (!supplierBusinessId.equals(item.getProductListing().getBusiness().getId())) {
+        if (!listing.isActive()
+                || !order.getSupplierBusiness().getId().equals(listing.getBusiness().getId())) {
             throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "The product listing must belong to the order's supplier.");
+                    HttpStatus.BAD_REQUEST, "Choose an active listing belonging to the order's supplier.");
         }
-    }
-
-    private void requireOrderVisible(Long orderId, String permission) {
-        CustomerOrder order = orderRepo.findById(orderId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found: " + orderId));
-        if (businessAccess.isSuperAdmin()
-                || businessAccess.canAccess(order.getBuyerBusiness().getId(), permission)
-                || businessAccess.canAccess(order.getSupplierBusiness().getId(), permission)) {
-            return;
+        if (quantity < listing.getMinimumOrderQuantity()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantity is below the listing minimum.");
         }
-        throw new org.springframework.security.access.AccessDeniedException(
-                "You do not have access to this order.");
+        if (listing.getWholesalePrice() == null || listing.getWholesalePrice().signum() < 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "The listing does not have a valid price.");
+        }
+        if (quantity > listing.getAvailableQuantity()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Not enough quantity is available.");
+        }
     }
 
     private void requireOrderVisible(OrderItem item, String permission) {
-        requireOrderVisible(item.getOrder().getId(), permission);
+        requireOrderVisible(item.getOrder(), permission);
+    }
+
+    private void requireOrderVisible(CustomerOrder order, String permission) {
+        if (businessAccess.isSuperAdmin()
+                || businessAccess.canAccess(order.getBuyerBusiness().getId(), permission)
+                || businessAccess.canAccess(order.getSupplierBusiness().getId(), permission)) return;
+        throw new org.springframework.security.access.AccessDeniedException("You do not have access to this order.");
     }
 
     private boolean canRead(OrderItem item) {
@@ -111,12 +155,32 @@ public class OrderItemService {
                 || businessAccess.canAccess(item.getOrder().getSupplierBusiness().getId(), "order-items:READ");
     }
 
-    private void validateItem(OrderItem item) {
-        if (item.getQuantity() <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantity must be greater than zero");
+    private CustomerOrder findOrder(Long id) {
+        return orderRepo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found."));
+    }
+
+    private ProductListing findListingForUpdate(Long id) {
+        return listingRepo.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product listing not found."));
+    }
+
+    private void requireBuyer(CustomerOrder order, String permission) {
+        businessAccess.requireAccess(order.getBuyerBusiness().getId(), permission);
+    }
+
+    private void requireOrderPending(CustomerOrder order) {
+        if (!"PENDING".equals(order.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Items can only be changed while an order is pending.");
         }
-        if (item.getUnitPrice() == null || item.getUnitPrice().signum() < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unit price must be zero or greater");
-        }
+    }
+
+    private void recalculateSubtotal(CustomerOrder order) {
+        BigDecimal subtotal = orderItemRepo.findByOrderId(order.getId()).stream()
+                .map(OrderItem::getLineTotal)
+                .filter(java.util.Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        order.setSubtotal(subtotal.doubleValue());
+        orderRepo.save(order);
     }
 }

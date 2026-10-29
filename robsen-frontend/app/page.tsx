@@ -1,7 +1,9 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Alert, Button } from "@/app/components/ui";
+import { ACTIVE_BUSINESS_STORAGE_KEY, SESSION_NOTICE_KEY } from "@/app/lib/auth";
 
 type LoginForm = {
   identifier: string;
@@ -13,10 +15,23 @@ export default function Home() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  useEffect(() => {
+    const authNotice = window.sessionStorage.getItem(SESSION_NOTICE_KEY);
+    if (!authNotice) return;
+    window.sessionStorage.removeItem(SESSION_NOTICE_KEY);
+    const timeout = window.setTimeout(() => {
+      setSessionExpired(true);
+      setError(authNotice);
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setSessionExpired(false);
     setIsSubmitting(true);
     const formData = new FormData(event.currentTarget);
     const password = String(formData.get("password") ?? "");
@@ -51,6 +66,11 @@ export default function Home() {
       if (!loginResponse.ok) {
         throw new Error(await readError(loginResponse));
       }
+      const sessionResponse = await fetch("/api/auth/me", { cache: "no-store" });
+      if (!sessionResponse.ok) {
+        throw new Error(await readError(sessionResponse));
+      }
+      window.sessionStorage.removeItem(ACTIVE_BUSINESS_STORAGE_KEY);
       router.push("/dashboard");
       router.refresh();
     } catch (submissionError) {
@@ -194,7 +214,7 @@ export default function Home() {
                 type="password"
               />
 
-              <button
+              <Button
                 className="sign-in-button"
                 disabled={isSubmitting}
                 type="submit"
@@ -205,10 +225,28 @@ export default function Home() {
                     ? "Create account"
                     : "Sign in"}
                 <span aria-hidden="true">→</span>
-              </button>
-              <p aria-live="polite" className="form-notice">
-                {error}
-              </p>
+              </Button>
+              {error ? (
+                <Alert
+                  tone={sessionExpired ? "warning" : "danger"}
+                  aria-live="polite"
+                  className={`form-notice${sessionExpired ? " session-expired-notice" : ""}`}
+                >
+                  {sessionExpired ? (
+                    <>
+                      <span className="form-notice-icon" aria-hidden="true">
+                        i
+                      </span>
+                      <span>
+                        <strong>Session expired</strong>
+                        <span>{error}</span>
+                      </span>
+                    </>
+                  ) : (
+                    error
+                  )}
+                </Alert>
+              ) : null}
             </form>
 
             <div className="card-footer">
@@ -221,6 +259,7 @@ export default function Home() {
               className="text-button"
               onClick={() => {
                 setError("");
+                setSessionExpired(false);
                 setIsRegistering((value) => !value);
               }}
               type="button"

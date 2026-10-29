@@ -11,6 +11,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
+import com.robsen.robsen.security.RolePermissionService;
 
 class RolePermissionsTest {
     @Test
@@ -25,8 +26,7 @@ class RolePermissionsTest {
                 () -> RolePermissions.normalize(List.of("users:READ")));
         assertThrows(IllegalArgumentException.class,
                 () -> RolePermissions.normalize(List.of("products:EXECUTE")));
-        assertThrows(IllegalArgumentException.class,
-                () -> RolePermissions.normalize(List.of("products:UPDATE")));
+        assertEquals(List.of("products:UPDATE"), RolePermissions.normalize(List.of("products:UPDATE")));
     }
 
     @Test
@@ -43,9 +43,30 @@ class RolePermissionsTest {
         assertFalse(roles.get("ADMIN").getPermissions().contains("memberships:DELETE"));
         assertFalse(roles.get("ADMIN").getPermissions().contains("businesses:DELETE"));
         assertTrue(roles.get("INVENTORY_MANAGER").getPermissions().contains("product-listings:UPDATE"));
-        assertFalse(roles.get("OWNER").getPermissions().contains("products:UPDATE"));
+        assertTrue(roles.get("OWNER").getPermissions().contains("products:UPDATE"));
         assertFalse(roles.get("VIEWER").getPermissions().stream().anyMatch(permission ->
                 permission.endsWith(":CREATE") || permission.endsWith(":UPDATE")
                         || permission.endsWith(":DELETE")));
+    }
+
+    @Test
+    void ownerMembershipKeepsDefaultPermissionsWhenStoredRoleIsPartial() {
+        Role owner = new Role();
+        owner.setName("OWNER");
+        owner.setActive(true);
+        owner.setPermissions(List.of("products:READ"));
+
+        assertTrue(RolePermissionService.hasRolePermission(owner, "orders:CREATE"));
+        assertTrue(RolePermissionService.hasRolePermission(owner, "memberships:DELETE"));
+    }
+
+    @Test
+    void customRolesDoNotInheritOwnerPermissions() {
+        Role manager = new Role();
+        manager.setName("CUSTOM_MANAGER");
+        manager.setActive(true);
+        manager.setPermissions(List.of("products:READ"));
+
+        assertFalse(RolePermissionService.hasRolePermission(manager, "orders:CREATE"));
     }
 }

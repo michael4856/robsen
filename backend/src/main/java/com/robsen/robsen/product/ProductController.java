@@ -35,6 +35,16 @@ public class ProductController {
         return productService.getActive();
     }
 
+    @GetMapping("/business/{businessId}")
+    public List<Product> getRegisteredForBusiness(@PathVariable Long businessId) {
+        return productService.getRegisteredForBusiness(businessId);
+    }
+
+    @GetMapping("/catalog/business/{businessId}")
+    public List<Product> getCatalogForBusiness(@PathVariable Long businessId) {
+        return productService.getCatalogForBusiness(businessId);
+    }
+
     @PutMapping("/{id}")
     public Product update(@PathVariable Long id, @RequestBody Product product) {
         return productService.update(id, product);

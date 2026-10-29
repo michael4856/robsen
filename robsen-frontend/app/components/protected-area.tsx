@@ -2,7 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import type { UserProfile } from "@/app/lib/auth";
+import {
+  notifySessionExpired,
+  renewSessionIfDue,
+  type UserProfile,
+} from "@/app/lib/auth";
 
 const AuthProfileContext = createContext<UserProfile | null>(null);
 
@@ -18,10 +22,18 @@ export default function ProtectedArea({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
+    void renewSessionIfDue();
     fetch("/api/auth/me", { cache: "no-store" })
       .then(async (response) => {
         if (response.status === 401) {
-          router.replace("/");
+          const result = (await response.json().catch(() => null)) as
+            | { code?: string; message?: string }
+            | null;
+          if (result?.code === "SESSION_EXPIRED") {
+            notifySessionExpired(result.message);
+          } else {
+            router.replace("/");
+          }
           return;
         }
         if (!response.ok) {
@@ -38,7 +50,9 @@ export default function ProtectedArea({ children }: { children: ReactNode }) {
           result.navigationItems.some((item) => typeof item !== "string") ||
           !Array.isArray(result.permissions) ||
           result.permissions.some((item) => typeof item !== "string") ||
-          typeof result.superAdmin !== "boolean"
+          typeof result.superAdmin !== "boolean" ||
+          !Array.isArray(result.businessIds) ||
+          result.businessIds.some((id) => typeof id !== "number")
         ) {
           throw new Error("The Robsen API returned an invalid user profile.");
         }

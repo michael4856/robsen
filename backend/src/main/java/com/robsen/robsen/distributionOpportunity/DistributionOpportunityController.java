@@ -30,6 +30,11 @@ public class DistributionOpportunityController {
         return opportunityService.getAll();
     }
 
+    @GetMapping("/marketplace")
+    public List<DistributionOpportunityService.MarketplaceOpportunity> getMarketplace() {
+        return opportunityService.getMarketplace();
+    }
+
     @GetMapping("/business/{businessId}")
     public List<DistributionOpportiunity> getByBusiness(@PathVariable Long businessId) {
         return opportunityService.getByBusiness(businessId);

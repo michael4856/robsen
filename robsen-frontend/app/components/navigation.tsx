@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { UserProfile } from "@/app/lib/auth";
+import { notifySessionExpired, type UserProfile } from "@/app/lib/auth";
 import { resources } from "@/app/lib/resources";
+import { Alert, Button } from "./ui";
 
 export default function Navigation() {
   const pathname = usePathname();
@@ -20,20 +21,31 @@ export default function Navigation() {
 
   useEffect(() => {
     let active = true;
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then(async (response) => {
+    const loadUser = () => {
+      fetch("/api/auth/me", { cache: "no-store" })
+        .then(async (response) => {
         if (response.ok) {
           const result = (await response.json()) as UserProfile;
           if (active) setUser(result);
-        } else if (active) {
-          setUser(null);
+        } else {
+          const result = (await response.json().catch(() => null)) as
+            | { code?: string; message?: string }
+            | null;
+          if (active) setUser(null);
+          if (result?.code === "SESSION_EXPIRED") {
+            notifySessionExpired(result.message);
+          }
         }
-      })
-      .catch(() => {
-        if (active) setLogoutError("Could not confirm your session.");
-      });
+        })
+        .catch(() => {
+          if (active) setLogoutError("Could not confirm your session.");
+        });
+    };
+    loadUser();
+    window.addEventListener("robsen:profile-updated", loadUser);
     return () => {
       active = false;
+      window.removeEventListener("robsen:profile-updated", loadUser);
     };
   }, [pathname]);
 
@@ -63,6 +75,7 @@ export default function Navigation() {
         {isDashboard ? (
           <div className="navigation-links dashboard-navigation-links">
             <Link href="/dashboard">Overview</Link>
+            <Link href="/dashboard/discover">Discover</Link>
             {user?.superAdmin ? <Link href="/dashboard/admin">Administration</Link> : null}
             {visibleResources.map((resource) => (
               <Link href={`/dashboard/${resource.key}`} key={resource.key}>
@@ -81,10 +94,15 @@ export default function Navigation() {
         {user ? (
           <div className="navigation-account">
             {user.superAdmin ? <span className="admin-badge">SUPER ADMIN</span> : null}
-            <span className="navigation-user">{user.fullName || user.email}</span>
-            <button className="navigation-cta" onClick={signOut} type="button">
+            <Link className="navigation-profile-link" href="/dashboard/profile" aria-label="Manage your profile">
+              <span className="navigation-avatar" style={user.profilePicture ? { backgroundImage: `url(${user.profilePicture})` } : undefined} aria-hidden="true">
+                {user.profilePicture ? null : (user.fullName || user.email).slice(0, 1).toUpperCase()}
+              </span>
+              <span className="navigation-user">{user.fullName || user.email}</span>
+            </Link>
+            <Button className="navigation-cta" onClick={signOut} variant="secondary">
               Sign out <span aria-hidden="true">↗</span>
-            </button>
+            </Button>
           </div>
         ) : (
           <Link className="navigation-cta" href="/#login">
@@ -92,7 +110,7 @@ export default function Navigation() {
           </Link>
         )}
       </nav>
-      {logoutError ? <p className="navigation-error">{logoutError}</p> : null}
+      {logoutError ? <Alert tone="danger" className="navigation-error">{logoutError}</Alert> : null}
     </header>
   );
 }

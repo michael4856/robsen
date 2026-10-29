@@ -1,4 +1,5 @@
 import ResourceManager from "@/app/components/resource-manager";
+import BusinessMembershipManager from "@/app/components/business-membership-manager";
 import { resources } from "@/app/lib/resources";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
@@ -22,5 +23,6 @@ export default function ResourcePage({ params }: ResourcePageProps) {
 async function ResolvedResourcePage({ params }: ResourcePageProps) {
   const { resource } = await params;
   if (!resources.some((entry) => entry.key === resource)) notFound();
+  if (resource === "memberships") return <BusinessMembershipManager />;
   return <ResourceManager resourceKey={resource} />;
 }

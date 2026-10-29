@@ -1,6 +1,8 @@
 package com.robsen.robsen.businessMembership;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import com.robsen.robsen.business.Business;
 import com.robsen.robsen.common.MembershipStatus;
@@ -35,8 +37,17 @@ public class BusinessMembership {
     @Column(nullable = false)
     private MembershipStatus status = MembershipStatus.ACTIVE;
 
-    @Column(nullable = false, updatable = false)
+    @Column(nullable = false)
     private LocalDateTime joinedAt = LocalDateTime.now();
+
+    private LocalDateTime invitedAt;
+
+    private LocalDateTime expiresAt;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "business_membership_permission_grants", joinColumns = @JoinColumn(name = "membership_id"))
+    @Column(name = "permission", nullable = false, length = 100)
+    private Set<String> permissionGrants = new LinkedHashSet<>();
 
     
       

@@ -9,6 +9,7 @@ export type FieldKind =
   | "relation"
   | "enum"
   | "role"
+  | "status"
   | "navigation"
   | "permissions";
 
@@ -18,8 +19,11 @@ export type FieldDefinition = {
   kind?: FieldKind;
   required?: boolean;
   options?: string[];
+  /** Required when kind === "relation": the endpoint used to load dropdown options. */
+  endpoint?: string;
   createOnly?: boolean;
   updateOnly?: boolean;
+  adminOnly?: boolean;
 };
 
 export type ResourceDefinition = {
@@ -37,6 +41,18 @@ export type ResourceDefinition = {
   deleteActionLabel?: string;
 };
 
+export const BUSINESS_TYPE_OPTIONS = [
+  "MANUFACTURER",
+  "WHOLESALER",
+  "DISTRIBUTOR",
+  "RETAILER",
+  "IMPORTER",
+  "EXPORTER",
+  "SERVICE_PROVIDER",
+  "COOPERATIVE",
+  "OTHER",
+];
+
 export const resources: ResourceDefinition[] = [
   {
     key: "businesses",
@@ -50,13 +66,20 @@ export const resources: ResourceDefinition[] = [
     fields: [
       { name: "legalName", label: "Legal name", required: true },
       { name: "tradeName", label: "Trading name" },
+      { name: "description", label: "Business description" },
       { name: "tinNumber", label: "Tax ID" },
       { name: "address", label: "Address" },
       { name: "email", label: "Email", kind: "email" },
-      { name: "businessType", label: "Business type" },
+      { name: "businessType", label: "Business type", kind: "enum", options: BUSINESS_TYPE_OPTIONS },
       { name: "phoneNumber", label: "Phone" },
-      { name: "verificationStatus", label: "Verification status", kind: "enum", options: ["PENDING", "COMPLETED", "APPROVED", "REJECTED", "CONFIRMED", "CANCELLED"] },
-      { name: "active", label: "Active", kind: "boolean" },
+      {
+        name: "verificationStatus",
+        label: "Verification status",
+        kind: "enum",
+        options: ["PENDING", "COMPLETED", "APPROVED", "REJECTED", "CONFIRMED", "CANCELLED"],
+        adminOnly: true,
+      },
+      { name: "active", label: "Active", kind: "boolean", adminOnly: true },
     ],
   },
   {
@@ -90,10 +113,15 @@ export const resources: ResourceDefinition[] = [
     deleteActionLabel: "Remove",
     columns: ["id", "user", "business", "role", "status"],
     fields: [
-      { name: "user", label: "User ID", kind: "relation", required: true },
-      { name: "business", label: "Business ID", kind: "relation", required: true },
-      { name: "role", label: "Role ID", kind: "relation", required: true },
-      { name: "status", label: "Status", kind: "enum", options: ["INVITED", "ACTIVE", "SUSPENDED", "REMOVED"] },
+      { name: "user", label: "User", kind: "relation", endpoint: "users/all", required: true },
+      { name: "business", label: "Business", kind: "relation", endpoint: "business/all", required: true },
+      { name: "role", label: "Role", kind: "role", required: true },
+      {
+        name: "status",
+        label: "Status",
+        kind: "enum",
+        options: ["INVITED", "ACTIVE", "SUSPENDED", "REMOVED"],
+      },
     ],
   },
   {
@@ -136,8 +164,14 @@ export const resources: ResourceDefinition[] = [
     columns: ["name", "productCategory", "price", "active"],
     fields: [
       { name: "name", label: "Name", required: true },
-      { name: "productCategory", label: "Category ID", kind: "relation" },
+      {
+        name: "productCategory",
+        label: "Category",
+        kind: "relation",
+        endpoint: "product-categories",
+      },
       { name: "description", label: "Description" },
+      { name: "imageUrl", label: "Image URL", kind: "text" },
       { name: "price", label: "Price", kind: "number", required: true },
       { name: "active", label: "Active", kind: "boolean" },
     ],
@@ -152,10 +186,10 @@ export const resources: ResourceDefinition[] = [
     deleteActionLabel: "Deactivate",
     columns: ["business", "product", "availableQuantity", "wholesalePrice", "active"],
     fields: [
-      { name: "business", label: "Business ID", kind: "relation", required: true },
-      { name: "product", label: "Product ID", kind: "relation", required: true },
+      { name: "business", label: "Business", kind: "relation", endpoint: "business/all", required: true },
+      { name: "product", label: "Product", kind: "relation", endpoint: "products", required: true },
       { name: "availableQuantity", label: "Available quantity", kind: "number" },
-      { name: "minimumOrderQuantity", label: "Minimum order quantity", kind: "number" },
+      { name: "minimumOrderQuantity", label: "Minimum order quantity", kind: "number", required: true },
       { name: "wholesalePrice", label: "Wholesale price", kind: "number" },
       { name: "description", label: "Description" },
       { name: "active", label: "Active", kind: "boolean" },
@@ -170,7 +204,7 @@ export const resources: ResourceDefinition[] = [
     description: "Maintain the regions and cities where partners operate.",
     columns: ["business", "name", "region", "city", "description"],
     fields: [
-      { name: "business", label: "Business ID", kind: "relation", required: true },
+      { name: "business", label: "Business", kind: "relation", endpoint: "business/all", required: true },
       { name: "name", label: "Name", required: true },
       { name: "region", label: "Region" },
       { name: "city", label: "City" },
@@ -187,12 +221,18 @@ export const resources: ResourceDefinition[] = [
     deleteActionLabel: "Close",
     columns: ["title", "business", "territory", "status", "expiresAt"],
     fields: [
-      { name: "business", label: "Business ID", kind: "relation" },
+      { name: "business", label: "Business", kind: "relation", endpoint: "business/all" },
       { name: "title", label: "Title", required: true },
       { name: "description", label: "Description" },
-      { name: "territory", label: "Territory ID", kind: "relation" },
+      { name: "imageUrl", label: "Cover image URL", kind: "text" },
+      { name: "territory", label: "Territory", kind: "relation", endpoint: "territories" },
       { name: "requirements", label: "Requirements" },
-      { name: "status", label: "Status" },
+      {
+        name: "status",
+        label: "Status",
+        kind: "enum",
+        options: ["DRAFT", "OPEN", "CLOSED", "EXPIRED", "CANCELLED"],
+      },
       { name: "expiresAt", label: "Expires at", kind: "datetime-local" },
     ],
   },
@@ -206,10 +246,16 @@ export const resources: ResourceDefinition[] = [
     columns: ["opportunity", "applicantBusiness", "status", "reviewedAt"],
     deletable: false,
     fields: [
-      { name: "opportunity", label: "Opportunity ID", kind: "relation", required: true },
-      { name: "applicantBusiness", label: "Applicant business ID", kind: "relation", required: true },
+      { name: "opportunity", label: "Opportunity", kind: "relation", endpoint: "distribution-opportunities", required: true },
+      { name: "applicantBusiness", label: "Applicant business", kind: "relation", endpoint: "business/all", required: true },
       { name: "message", label: "Message" },
-      { name: "status", label: "Status", kind: "enum", options: ["PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED", "WITHDRAWN"], updateOnly: true },
+      {
+        name: "status",
+        label: "Status",
+        kind: "enum",
+        options: ["PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED", "WITHDRAWN"],
+        updateOnly: true,
+      },
       { name: "reviewedAt", label: "Reviewed at", kind: "datetime-local", updateOnly: true },
     ],
   },
@@ -223,11 +269,16 @@ export const resources: ResourceDefinition[] = [
     deleteActionLabel: "Terminate",
     columns: ["partnerBusiness", "territory", "startDate", "endDate", "status"],
     fields: [
-      { name: "partnerBusiness", label: "Partner business ID", kind: "relation", required: true },
-      { name: "territory", label: "Territory ID", kind: "relation" },
+      { name: "partnerBusiness", label: "Partner business", kind: "relation", endpoint: "business/all", required: true },
+      { name: "territory", label: "Territory", kind: "relation", endpoint: "territories" },
       { name: "startDate", label: "Start date", kind: "date", required: true },
       { name: "endDate", label: "End date", kind: "date" },
-      { name: "status", label: "Status", kind: "enum", options: ["DRAFT", "PENDING_APPROVAL", "ACTIVE", "EXPIRED", "TERMINATED", "REJECTED"] },
+      {
+        name: "status",
+        label: "Status",
+        kind: "enum",
+        options: ["DRAFT", "PENDING_APPROVAL", "ACTIVE", "EXPIRED", "TERMINATED", "REJECTED"],
+      },
       { name: "terms", label: "Terms" },
     ],
   },
@@ -241,10 +292,15 @@ export const resources: ResourceDefinition[] = [
     deleteActionLabel: "Cancel",
     columns: ["orderNumber", "buyerBusiness", "supplierBusiness", "status", "subtotal"],
     fields: [
-      { name: "buyerBusiness", label: "Buyer business ID", kind: "relation", required: true },
-      { name: "supplierBusiness", label: "Supplier business ID", kind: "relation", required: true },
+      { name: "buyerBusiness", label: "Buyer business", kind: "relation", endpoint: "business/all", required: true },
+      { name: "supplierBusiness", label: "Supplier business", kind: "relation", endpoint: "business/all", required: true },
       { name: "orderNumber", label: "Order number", required: true },
-      { name: "status", label: "Status" },
+      {
+        name: "status",
+        label: "Status",
+        kind: "enum",
+        options: ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"],
+      },
       { name: "subtotal", label: "Subtotal", kind: "number" },
     ],
   },
@@ -257,8 +313,8 @@ export const resources: ResourceDefinition[] = [
     description: "Manage the product listing quantities and prices within orders.",
     columns: ["order", "productListing", "quantity", "unitPrice", "lineTotal"],
     fields: [
-      { name: "order", label: "Order ID", kind: "relation", required: true },
-      { name: "productListing", label: "Product listing ID", kind: "relation", required: true },
+      { name: "order", label: "Order", kind: "relation", endpoint: "orders", required: true },
+      { name: "productListing", label: "Product listing", kind: "relation", endpoint: "product-listings", required: true },
       { name: "quantity", label: "Quantity", kind: "number", required: true },
       { name: "unitPrice", label: "Unit price", kind: "number", required: true },
     ],

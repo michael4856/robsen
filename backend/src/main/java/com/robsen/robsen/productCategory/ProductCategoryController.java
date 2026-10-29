@@ -35,6 +35,11 @@ public class ProductCategoryController {
         return categoryService.getActive();
     }
 
+    @GetMapping("/business/{businessId}")
+    public List<ProductCategory> getForBusiness(@PathVariable Long businessId) {
+        return categoryService.getForBusiness(businessId);
+    }
+
     @PutMapping("/{id}")
     public ProductCategory update(@PathVariable Long id, @RequestBody ProductCategory category) {
         return categoryService.update(id, category);

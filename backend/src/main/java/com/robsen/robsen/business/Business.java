@@ -24,6 +24,7 @@ public class Business {
     @Column(nullable = false)
     private String legalName;
     private String tradeName;
+    private String description;
     private String tinNumber;
     private String address;
     private String email;

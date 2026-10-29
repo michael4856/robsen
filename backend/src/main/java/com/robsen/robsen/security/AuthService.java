@@ -84,6 +84,23 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
+    public AuthResponse refresh(String identifier) {
+        UserDetails userDetails = userDetailsService.loadUserByUsername(identifier);
+        if (!userDetails.isEnabled()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Account is disabled.");
+        }
+        User user = userRepo.findByEmailIgnoreCaseOrUsernameIgnoreCase(identifier, identifier)
+                .filter(User::isActive)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "Account is no longer available."));
+        return new AuthResponse(
+                jwtService.createToken(userDetails),
+                "Bearer",
+                jwtService.getExpirationSeconds(),
+                toProfile(user));
+    }
+
+    @Transactional(readOnly = true)
     public UserProfile getProfile(String identifier) {
         User user = userRepo.findByEmailIgnoreCaseOrUsernameIgnoreCase(identifier, identifier)
                 .filter(User::isActive)
@@ -92,11 +109,66 @@ public class AuthService {
         return toProfile(user);
     }
 
+    @Transactional
+    public AuthResponse updateProfile(String identifier, ProfileUpdateRequest request) {
+        User user = findActiveUser(identifier);
+        if (isBlank(request.fullName()) || isBlank(request.email()) || isBlank(request.username())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name, email, and username are required.");
+        }
+        User candidate = new User();
+        candidate.setEmail(request.email().trim());
+        candidate.setUsername(request.username().trim());
+        userService.ensureProfileIdentityAvailable(candidate, user.getId());
+        user.setFullName(request.fullName().trim());
+        user.setEmail(request.email().trim());
+        user.setUsername(request.username().trim());
+        user.setPhoneNumber(request.phoneNumber() == null || request.phoneNumber().isBlank()
+                ? null : request.phoneNumber().trim());
+        user.setProfilePicture(validateProfilePicture(request.profilePicture()));
+        User savedUser = userRepo.save(user);
+        UserDetails userDetails = userDetailsService.loadUserByUsername(savedUser.getEmail());
+        return new AuthResponse(jwtService.createToken(userDetails), "Bearer", jwtService.getExpirationSeconds(), toProfile(savedUser));
+    }
+
+    @Transactional
+    public void changePassword(String identifier, ChangePasswordRequest request) {
+        User user = findActiveUser(identifier);
+        if (isBlank(request.currentPassword()) || isBlank(request.newPassword())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current and new passwords are required.");
+        }
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current password is incorrect.");
+        }
+        if (request.newPassword().length() < 8) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "New password must be at least 8 characters long.");
+        }
+        if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a password different from your current one.");
+        }
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        userRepo.save(user);
+    }
+
+    private User findActiveUser(String identifier) {
+        return userRepo.findByEmailIgnoreCaseOrUsernameIgnoreCase(identifier, identifier)
+                .filter(User::isActive)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Account is no longer available."));
+    }
+
+    private String validateProfilePicture(String picture) {
+        if (picture == null || picture.isBlank()) return null;
+        if (picture.length() > 2_800_000
+                || !picture.matches("^data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Upload a PNG, JPEG, or WebP image up to 2 MB.");
+        }
+        return picture;
+    }
+
     private UserProfile toProfile(User user) {
         List<String> navigationItems = rolePermissionService.navigationFor(user);
         List<String> permissions = rolePermissionService.permissionsFor(user);
         return UserProfile.from(user, navigationItems, permissions,
-                rolePermissionService.isSuperAdmin(user));
+                rolePermissionService.isSuperAdmin(user), rolePermissionService.businessIdsFor(user));
     }
 
     private boolean isBlank(String value) {
@@ -127,9 +199,15 @@ public class AuthService {
             boolean active,
             List<String> navigationItems,
             List<String> permissions,
-            boolean superAdmin) {
+            boolean superAdmin,
+            List<Long> businessIds,
+            String profilePicture) {
         static UserProfile from(
-                User user, List<String> navigationItems, List<String> permissions, boolean superAdmin) {
+                User user,
+                List<String> navigationItems,
+                List<String> permissions,
+                boolean superAdmin,
+                List<Long> businessIds) {
             return new UserProfile(
                     user.getId(),
                     user.getFullName(),
@@ -140,7 +218,20 @@ public class AuthService {
                     user.isActive(),
                     navigationItems,
                     permissions,
-                    superAdmin);
+                    superAdmin,
+                    businessIds,
+                    user.getProfilePicture());
         }
+    }
+
+    public record ProfileUpdateRequest(
+            String fullName,
+            String email,
+            String username,
+            String phoneNumber,
+            String profilePicture) {
+    }
+
+    public record ChangePasswordRequest(String currentPassword, String newPassword) {
     }
 }

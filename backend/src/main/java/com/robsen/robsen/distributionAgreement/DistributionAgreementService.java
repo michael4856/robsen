@@ -31,6 +31,10 @@ public class DistributionAgreementService {
     public DistributionAgreement create(DistributionAgreement agreement) {
         agreement.setId(null);
         businessAccess.requireAccess(agreement.getPartnerBusiness().getId(), "agreements:CREATE");
+        if (!businessAccess.isSuperAdmin() && agreement.getStatus() != AgreementStatus.DRAFT) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Business members can create agreements only as drafts.");
+        }
         validateTerritory(agreement.getTerritory(), agreement.getPartnerBusiness().getId());
         return agreementRepo.save(agreement);
     }
@@ -73,6 +77,16 @@ public class DistributionAgreementService {
         DistributionAgreement agreement = get(id);
         businessAccess.requireAccess(agreement.getPartnerBusiness().getId(), "agreements:UPDATE");
         businessAccess.requireAccess(input.getPartnerBusiness().getId(), "agreements:UPDATE");
+        boolean owner = businessAccess.isBusinessOwner(agreement.getPartnerBusiness().getId());
+        if (!businessAccess.isSuperAdmin() && !owner
+                && (agreement.getStatus() != AgreementStatus.DRAFT || input.getStatus() != AgreementStatus.DRAFT)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Managers can update draft agreements only; agreement status changes are owner controlled.");
+        }
+        if (!businessAccess.isSuperAdmin() && !owner && input.getStatus() != agreement.getStatus()) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Managers cannot change the agreement status.");
+        }
         validateTerritory(input.getTerritory(), input.getPartnerBusiness().getId());
         agreement.setPartnerBusiness(input.getPartnerBusiness());
         agreement.setTerritory(input.getTerritory());

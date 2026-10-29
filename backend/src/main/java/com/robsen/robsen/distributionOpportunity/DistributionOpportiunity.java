@@ -19,6 +19,7 @@ public class DistributionOpportiunity {
     private Business business;
     private String title;
     private String description;
+    private String imageUrl;
     @ManyToOne
     @JoinColumn(name = "territory_id")
     private Territory territory;

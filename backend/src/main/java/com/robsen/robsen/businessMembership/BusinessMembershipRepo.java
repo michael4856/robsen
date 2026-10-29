@@ -11,6 +11,8 @@ public interface BusinessMembershipRepo extends JpaRepository<BusinessMembership
     List<BusinessMembership> findByUserIdAndStatus(Long userId, MembershipStatus status);
     java.util.Optional<BusinessMembership> findByUserIdAndBusinessIdAndStatus(
             Long userId, Long businessId, MembershipStatus status);
+    boolean existsByUserIdAndBusinessIdAndStatusIn(
+            Long userId, Long businessId, java.util.Collection<MembershipStatus> statuses);
     List<BusinessMembership> findByBusinessId(Long businessId);
     List<BusinessMembership> findByBusinessIdIn(java.util.Collection<Long> businessIds);
 }
