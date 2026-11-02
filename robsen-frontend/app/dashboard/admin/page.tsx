@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import ProtectedArea, { useAuthProfile } from "@/app/components/protected-area";
+import { ListingGrid } from "@/app/components/ui";
 import { apiFetch } from "@/app/lib/api-client";
 
 const sections = [
@@ -102,7 +103,7 @@ function AdminContent() {
           <span className="admin-badge admin-badge-large">SUPER ADMIN</span>
         </div>
         {error ? <div className="dashboard-alert" role="alert">{error}</div> : null}
-        <div className="admin-grid">
+        <ListingGrid className="admin-grid">
           {sections.map((section) => (
             <Link className="admin-card" href={section.href} key={section.key}>
               <span className="admin-card-count">{counts[section.key] ?? "—"}</span>
@@ -111,7 +112,7 @@ function AdminContent() {
               <span className="resource-card-link">Manage <span aria-hidden="true">↗</span></span>
             </Link>
           ))}
-        </div>
+        </ListingGrid>
         <section className="admin-note">
           <h2>Access model</h2>
           <p>

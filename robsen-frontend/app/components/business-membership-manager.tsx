@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import ProtectedArea, { useAuthProfile } from "@/app/components/protected-area";
 import { apiFetch } from "@/app/lib/api-client";
+import { StatusBadge } from "@/app/components/ui";
 
 type BusinessOption = { id: number; legalName: string; tradeName?: string | null };
 type UserOption = { id: number; fullName?: string | null; email?: string | null; username?: string | null };
@@ -191,7 +192,7 @@ function MembershipContent() {
               <ManagerPermissionEditor businessId={Number(businessId)} businessName={selectedBusiness?.tradeName || selectedBusiness?.legalName || "this business"} onDirtyChange={setManagerPermissionDirty} />
             ) : null}
             <section aria-label="Business members" className="records-panel"><div className="records-toolbar"><div><h2>{selectedBusiness?.tradeName || selectedBusiness?.legalName || "Members"}</h2><span>{loading ? "Loading…" : `${memberships.length} members and invitations`}</span></div></div>
-              {loading ? <div className="empty-state">Loading memberships…</div> : memberships.length === 0 ? <div className="empty-state">No members yet. Search for a Robsen user to invite them.</div> : <div className="table-scroll"><table className="records-table"><thead><tr><th>USER</th><th>ROLE</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody>
+              {loading ? <div className="empty-state">Loading memberships…</div> : memberships.length === 0 ? <div className="empty-state">No members yet. Search for a Robsen user to invite them.</div> : <div className="table-scroll"><table className="records-table"><thead><tr><th scope="col">USER</th><th scope="col">ROLE</th><th scope="col">STATUS</th><th scope="col">ACTIONS</th></tr></thead><tbody>
                 {memberships.map((membership) => <MembershipRow
                   key={membership.id}
                   membership={membership}
@@ -350,7 +351,7 @@ function MembershipRow({
     <tr>
       <td>{membership.user.fullName || membership.user.username}<br /><span className="membership-email">{membership.user.email}</span></td>
       <td>{membership.role.name.replaceAll("_", " ")}</td>
-      <td>{membership.status}<br />{membership.permissionGrants?.length ? <span className="membership-email">{membership.permissionGrants.length} extra permissions</span> : null}</td>
+      <td><StatusBadge tone={membership.status === "ACTIVE" ? "success" : membership.status === "INVITED" ? "warning" : membership.status === "SUSPENDED" ? "danger" : "neutral"}>{membership.status}</StatusBadge>{membership.permissionGrants?.length ? <div className="membership-email">{membership.permissionGrants.length} extra permissions</div> : null}</td>
       <td className="membership-actions">
         {canEditPermissions ? <button className="text-button" onClick={() => setEditing((value) => !value)} type="button">{editing ? "Close permissions" : "Permissions"}</button> : null}
         {!isOwner && membership.status === "ACTIVE" ? <button className="text-button" onClick={() => void onUpdateStatus(membership, "SUSPENDED")} type="button">Suspend</button> : null}

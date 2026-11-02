@@ -4,7 +4,7 @@ import Link from "next/link";
 import { type FormEvent, useEffect, useState } from "react";
 import ProtectedArea, { useAuthProfile } from "@/app/components/protected-area";
 import NetworkHome from "@/app/components/network-home";
-import { Alert } from "@/app/components/ui";
+import { Alert, ListingGrid } from "@/app/components/ui";
 import { apiFetch } from "@/app/lib/api-client";
 import { ACTIVE_BUSINESS_STORAGE_KEY } from "@/app/lib/auth";
 import { BUSINESS_TYPE_OPTIONS, resources } from "@/app/lib/resources";
@@ -339,7 +339,7 @@ function DashboardContent() {
           </section>
         ) : null}
 
-        {(!needsBusinessSelection && (profile?.superAdmin || !profile?.businessIds.length || Boolean(activeBusinessId))) ? <div className="resource-grid">
+        {(!needsBusinessSelection && (profile?.superAdmin || !profile?.businessIds.length || Boolean(activeBusinessId))) ? <ListingGrid className="resource-grid">
           {visibleResources.map((resource, index) => (
             <Link
               className="resource-card"
@@ -361,7 +361,7 @@ function DashboardContent() {
               </span>
             </Link>
           ))}
-        </div> : null}
+        </ListingGrid> : null}
         {!loading && visibleResources.length === 0 && !error ? (
           profile?.businessIds.length === 0 && !profile.superAdmin ? (
             <section className="dashboard-empty-state" aria-live="polite">

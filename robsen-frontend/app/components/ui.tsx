@@ -5,6 +5,7 @@ type Tone = "neutral" | "success" | "warning" | "danger";
 const buttonVariantClasses = {
   primary: "ui-button",
   secondary: "ui-button-secondary",
+  outline: "ui-button-outline",
   danger: "ui-button-danger",
   quiet: "ui-button-quiet",
 } as const;
@@ -31,6 +32,18 @@ export function Alert({ tone = "neutral", className = "", children, ...props }: 
 
 export function Badge({ className = "", ...props }: HTMLAttributes<HTMLSpanElement>) {
   return <span className={["ui-badge", className].filter(Boolean).join(" ")} {...props} />;
+}
+
+export function ListingGrid({ className = "", ...props }: HTMLAttributes<HTMLDivElement>) {
+  return <div className={["ui-listing-grid", className].filter(Boolean).join(" ")} {...props} />;
+}
+
+export function StatusBadge({ tone = "neutral", className = "", ...props }: HTMLAttributes<HTMLSpanElement> & { tone?: Tone }) {
+  return <span data-tone={tone} className={["ui-status-badge", className].filter(Boolean).join(" ")} {...props} />;
+}
+
+export function LoadingSkeleton({ className = "", ...props }: HTMLAttributes<HTMLDivElement>) {
+  return <div aria-hidden="true" className={["ui-skeleton", className].filter(Boolean).join(" ")} {...props} />;
 }
 
 export function PageHeading({ title, description, level = 1, className = "" }: { title: ReactNode; description?: ReactNode; level?: 1 | 2; className?: string }) {

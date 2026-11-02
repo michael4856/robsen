@@ -1,0 +1,237 @@
+/* Shared listing system: product, opportunity, and business cards use the same grid rhythm. */
+.network-home-page {
+  --network-blue: var(--color-brand-700);
+  --network-blue-bright: var(--color-brand-500);
+  --network-ink: var(--color-ink);
+  --network-muted: var(--color-muted);
+  --network-line: var(--color-border);
+  --network-shadow: var(--shadow-panel);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+.network-home-page :is(.network-opportunity-grid, .network-product-grid, .network-directory-grid) {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  align-items: stretch;
+  gap: var(--space-4);
+}
+.network-home-page :is(.network-opportunity-card, .network-product-card, .network-directory-card) {
+  min-width: 0;
+  min-height: 100%;
+  overflow: hidden;
+  border-color: var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-panel);
+}
+.network-home-page .network-product-card { display: flex; flex-direction: column; padding: 0; }
+.network-home-page .network-product-image {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 180px;
+  flex: 0 0 180px;
+  place-items: center;
+  background: var(--color-surface-muted);
+}
+.network-home-page .network-product-image > img { width: 100%; height: 100%; object-fit: contain; }
+.network-home-page .network-product-details { display: flex; flex: 1; flex-direction: column; gap: var(--space-2); padding: var(--space-4); }
+.network-home-page .network-product-details h3,
+.network-home-page .network-opportunity-card h3 { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: var(--text-base); line-height: 1.4; }
+.network-home-page .network-product-details p,
+.network-home-page .network-directory-card p { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: var(--color-muted); font-size: var(--text-sm); line-height: 1.5; }
+.network-home-page .network-product-details > strong { margin-top: auto; color: var(--color-ink); font-size: var(--text-base); }
+.network-home-page .network-product-details a,
+.network-home-page .network-directory-card > a { margin-top: auto; font-size: var(--text-sm); }
+.network-home-page .network-directory-card { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); }
+.network-home-page .network-directory-identity > div { min-width: 0; }
+.network-home-page .network-directory-card strong { overflow: hidden; font-size: var(--text-base); text-overflow: ellipsis; white-space: nowrap; }
+.network-home-page .network-directory-card small,
+.network-home-page .network-business-status { font-size: var(--text-xs); }
+.network-home-page .network-directory-card p { min-height: 3em; margin: 0; }
+.network-home-page .network-opportunity-card { display: flex; flex-direction: column; padding: var(--space-4); }
+.network-home-page .network-opportunity-card p,
+.network-home-page .network-opportunity-card small { color: var(--color-muted); font-size: var(--text-sm); }
+.network-home-page .network-opportunity-description { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.network-home-page .network-directory-card .network-business-mark { width: var(--business-logo-size); height: var(--business-logo-size); flex: 0 0 var(--business-logo-size); }
+.sample-business-cover { height: var(--business-image-height); }
+.sample-business-logo { width: var(--business-logo-size); height: var(--business-logo-size); }
+.network-home-page .network-business-status.is-complete { background: var(--color-success-soft); color: var(--color-success); }
+.network-home-page .network-business-status.is-rejected { background: var(--color-danger-soft); color: var(--color-danger); }
+.network-home-page .network-business-status.is-pending { background: var(--color-warning-soft); color: var(--color-warning); }
+.network-home-page .network-product-category,
+.network-home-page .network-business-status { border-radius: var(--radius-pill); }
+
+/* Application-wide defaults for repeated listing, form, and table patterns. */
+.marketplace-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+  gap: var(--grid-gap);
+}
+.marketplace-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  border-color: var(--color-border);
+  border-radius: var(--card-radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-panel);
+}
+.marketplace-grid:not(.opportunity-grid) .marketplace-cover {
+  height: var(--product-image-height);
+  flex: 0 0 var(--product-image-height);
+  background: var(--product-image-background);
+}
+.marketplace-grid:not(.opportunity-grid) .marketplace-cover img { object-fit: contain; }
+.marketplace-loading-card { min-height: 28rem; border: 1px solid var(--color-border); border-radius: var(--card-radius); }
+.marketplace-grid.opportunity-grid .marketplace-cover {
+  height: var(--business-image-height);
+  flex: 0 0 var(--business-image-height);
+}
+.marketplace-card-content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  padding: var(--card-padding);
+}
+.marketplace-card h2 {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-tight);
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.marketplace-description { -webkit-line-clamp: 2; line-height: var(--leading-normal); }
+.marketplace-meta { margin-top: auto; }
+.listing-price { font-size: var(--text-lg); line-height: var(--leading-normal); }
+.marketplace-action { gap: var(--card-gap); }
+.opportunity-card .marketplace-card-content { min-height: 0; }
+.opportunity-action { margin-top: auto; }
+
+.primary-button,
+.secondary-button,
+.ui-button,
+.ui-button-secondary,
+.ui-button-outline,
+.ui-button-danger {
+  min-height: var(--button-height);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+}
+.field-control { gap: var(--space-2); color: var(--color-muted); font-size: var(--text-xs); }
+.field-control input,
+.field-control select,
+.field-control textarea,
+.search-input,
+.business-selector select,
+.profile-form input:not([type="checkbox"]):not([type="radio"]),
+.profile-form select,
+.profile-form textarea,
+.network-feed-controls select,
+.network-global-search input {
+  min-height: var(--input-height);
+  border-color: var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+}
+.field-control input:focus,
+.field-control select:focus,
+.field-control textarea:focus,
+.search-input:focus,
+.business-selector select:focus,
+.profile-form input:focus,
+.profile-form select:focus,
+.profile-form textarea:focus,
+.network-feed-controls select:focus,
+.network-global-search:focus-within {
+  border-color: var(--color-brand-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand-500) 16%, transparent);
+}
+.records-panel,
+.editor-panel { border-color: var(--color-border); border-radius: var(--card-radius); box-shadow: var(--shadow-panel); }
+.dashboard-page h1,
+.dashboard-content > .list-heading h1 { font-family: var(--font-sans); font-size: var(--text-2xl); line-height: var(--leading-tight); font-weight: var(--font-weight-semibold); }
+.dashboard-page .list-heading h2,
+.opportunity-discovery h2 { font-family: var(--font-sans); font-size: var(--text-xl); line-height: var(--leading-tight); font-weight: var(--font-weight-semibold); }
+.dashboard-content > section,
+.opportunity-discovery { margin-top: var(--section-gap); }
+
+@media (max-width: 1200px) {
+  .marketplace-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .marketplace-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .marketplace-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: var(--space-4); }
+  .network-home-page :is(.network-opportunity-grid, .network-product-grid, .network-directory-grid) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 13.5rem), 1fr));
+  }
+  .network-home-page .network-product-image { height: 160px; flex-basis: 160px; }
+}
+
+@media (max-width: 1150px) {
+  .network-home-page .network-home-grid { grid-template-columns: minmax(0, 1fr) 270px; }
+  .network-home-page .network-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .network-home-page .network-home-grid { grid-template-columns: 1fr; }
+  .network-home-page .network-home-aside { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .network-home-page .network-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .dashboard-header .navigation { position: relative; width: calc(100% - 28px); min-height: 62px; flex-wrap: nowrap; justify-content: space-between; gap: 9px; }
+  .dashboard-header .dashboard-mobile-menu-toggle { display: grid; width: 38px; height: 38px; margin-left: auto; place-items: center; border: 1px solid rgba(255,255,255,.16); border-radius: 8px; background: rgba(255,255,255,.08); color: #fff; cursor: pointer; font-size: 18px; }
+  .dashboard-header .dashboard-navigation-links { position: absolute; z-index: 25; top: calc(100% + 5px); right: 0; left: 0; display: none; width: auto; max-height: min(70vh, 480px); flex: none; flex-direction: column; gap: 4px; margin: 0; padding: 10px; overflow-y: auto; border: 1px solid rgba(255,255,255,.12); border-radius: 12px; background: #102b4b; box-shadow: 0 14px 30px rgba(7,27,50,.24); }
+  .dashboard-header .dashboard-navigation-links.is-open { display: flex; }
+  .dashboard-header .dashboard-navigation-links a { min-height: 42px; flex: 0 0 auto; border-radius: 8px; }
+  .dashboard-header .navigation-account { width: auto; flex: 0 0 auto; gap: 7px; }
+  .dashboard-header .navigation-account .navigation-cta { min-height: 34px; padding: 7px 8px; }
+  .site-header.dashboard-header ~ main { padding-top: 62px; }
+  .network-home-page .network-home-topbar { top: 62px; min-height: 58px; }
+  .network-home-page .network-home-content { width: calc(100% - 24px); padding-top: 14px; }
+  .network-home-page .network-stat-grid { grid-template-columns: 1fr; }
+  .network-home-page .network-stat-card { min-height: 78px; }
+  .network-home-page .network-feed-controls { grid-template-columns: 1fr; }
+  .network-home-page .network-feed-heading { align-items: flex-start; flex-direction: column; }
+  .network-home-page .network-opportunity-title-row { align-items: flex-start; flex-direction: column; gap: 9px; }
+  .network-home-page .network-feed-heading h2 { font-size: 17px; }
+  .network-home-page .network-home-aside { grid-template-columns: 1fr; }
+  .network-home-page .network-product-grid, .network-home-page .network-directory-grid { grid-template-columns: 1fr; }
+  .network-home-page .sample-business-details { grid-template-columns: 1fr; }
+  .network-home-page .sample-business-heading { align-items: flex-start; flex-wrap: wrap; }
+  .network-home-page .sample-business-status { margin-left: 0; }
+}
+
+/* Readable high contrast dashboard navigation and larger listing cards. */
+.site-header.dashboard-header {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: #000;
+}
+.dashboard-header .brand,
+.dashboard-header .navigation-profile-link,
+.dashboard-header .navigation-user { color: #000; }
+.dashboard-header .dashboard-navigation-links { min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+.dashboard-header .dashboard-navigation-links a { color: #000; font-size: var(--text-base); }
+.dashboard-header .dashboard-navigation-links a:hover,
+.dashboard-header .dashboard-navigation-links a[aria-current="page"] { background: var(--color-brand-500); color: #fff; }
+.dashboard-header .navigation-account { border-color: var(--color-border); }
+.dashboard-header .navigation-cta { border-color: var(--color-border-strong); color: #000; }
+.dashboard-header .navigation-cta:hover { background: var(--color-surface-muted); }
+.product-summary-card { min-height: 120px; padding: 20px 22px; border-radius: var(--card-radius); }
+.product-summary-card p { font-size: var(--text-sm); }
+.network-home-page .network-product-card { min-height: 390px; }
+.marketplace-grid:not(.opportunity-grid) .marketplace-card { min-height: 460px; }
+
+@media (max-width: 640px) {
+  .dashboard-header .dashboard-navigation-links { background: var(--color-surface); }
+}
