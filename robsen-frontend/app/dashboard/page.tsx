@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { type FormEvent, useEffect, useState } from "react";
 import ProtectedArea, { useAuthProfile } from "@/app/components/protected-area";
+import NetworkHome from "@/app/components/network-home";
 import { Alert } from "@/app/components/ui";
 import { apiFetch } from "@/app/lib/api-client";
 import { ACTIVE_BUSINESS_STORAGE_KEY } from "@/app/lib/auth";
@@ -51,6 +52,7 @@ type FeedOpportunity = {
   description?: string | null;
   territory?: string | null;
   businessName: string;
+  businessType?: string | null;
 };
 
 export default function DashboardPage() {
@@ -67,6 +69,7 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [createError, setCreateError] = useState("");
+  const [invitationError, setInvitationError] = useState("");
   const [creationNotice, setCreationNotice] = useState("");
   const [creating, setCreating] = useState(false);
   const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
@@ -225,6 +228,7 @@ function DashboardContent() {
           email: formData.get("email"),
           phoneNumber: formData.get("phoneNumber"),
           address: formData.get("address"),
+          description: formData.get("description"),
         }),
       });
       if (!response) throw new Error("Could not create your business.");
@@ -235,6 +239,29 @@ function DashboardContent() {
     } finally {
       setCreating(false);
     }
+  }
+
+  async function acceptInvitation(invitationId: number) {
+    setInvitationError("");
+    try {
+      await apiFetch(`business-memberships/invitations/${invitationId}/accept`, { method: "POST" });
+      window.location.reload();
+    } catch (requestError) {
+      setInvitationError(requestError instanceof Error ? requestError.message : "Could not accept this invitation.");
+    }
+  }
+
+  if (profile && !profile.superAdmin && profile.businessIds.length === 0) {
+    return <NetworkHome
+      createError={createError}
+      creationNotice={creationNotice}
+      creating={creating}
+      invitations={invitations}
+      invitationError={invitationError}
+      onAcceptInvitation={acceptInvitation}
+      onCreateBusiness={createBusiness}
+      profile={profile}
+    />;
   }
 
   return (

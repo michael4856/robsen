@@ -83,6 +83,7 @@ public class DistributionOpportunityService {
                         opportunity.getBusiness().getTradeName() == null
                                 ? opportunity.getBusiness().getLegalName()
                                 : opportunity.getBusiness().getTradeName(),
+                        opportunity.getBusiness().getBusinessType(),
                         opportunity.getExpiresAt()))
                 .toList();
     }
@@ -156,5 +157,6 @@ public class DistributionOpportunityService {
             String territory,
             Long businessId,
             String businessName,
+            String businessType,
             java.time.LocalDateTime expiresAt) {}
 }

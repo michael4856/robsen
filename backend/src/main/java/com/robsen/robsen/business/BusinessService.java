@@ -124,6 +124,34 @@ public class BusinessService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public MarketplaceBusinessDirectory getMarketplaceBusinesses(String search) {
+        String normalized = search == null ? "" : search.trim().toLowerCase(java.util.Locale.ROOT);
+        List<MarketplaceBusiness> matches = businessRepo.findByActiveTrue()
+                .stream()
+                .filter(business -> normalized.isEmpty()
+                        || contains(business.getLegalName(), normalized)
+                        || contains(business.getTradeName(), normalized)
+                        || contains(business.getBusinessType(), normalized)
+                        || contains(business.getDescription(), normalized))
+                .sorted(java.util.Comparator.comparing(
+                        (Business business) -> business.getTradeName() == null
+                                ? business.getLegalName() : business.getTradeName(),
+                        String.CASE_INSENSITIVE_ORDER))
+                .map(business -> new MarketplaceBusiness(
+                        business.getId(),
+                        business.getTradeName() == null ? business.getLegalName() : business.getTradeName(),
+                        business.getBusinessType(),
+                        business.getDescription(),
+                        business.getVerificationStatus() == null ? null : business.getVerificationStatus().name()))
+                .toList();
+        return new MarketplaceBusinessDirectory(matches.stream().limit(100).toList(), matches.size());
+    }
+
+    private static boolean contains(String value, String query) {
+        return value != null && value.toLowerCase(java.util.Locale.ROOT).contains(query);
+    }
+
     @Transactional
     public ResponseEntity<Business> updateBusiness(Long id, Business updatedBusiness){
 
@@ -179,5 +207,14 @@ public class BusinessService {
             Long membershipId,
             String membershipRole,
             MembershipStatus membershipStatus) {}
+
+    public record MarketplaceBusiness(
+            Long id,
+            String name,
+            String businessType,
+            String description,
+            String verificationStatus) {}
+
+    public record MarketplaceBusinessDirectory(List<MarketplaceBusiness> businesses, long total) {}
 
 }

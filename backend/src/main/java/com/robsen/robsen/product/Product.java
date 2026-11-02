@@ -4,6 +4,7 @@ import com.robsen.robsen.productCategory.ProductCategory;
 import com.robsen.robsen.business.Business;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -26,6 +27,7 @@ public class Product {
     private Business business;
     private String name;
     private String description;
+    @Column(columnDefinition = "TEXT")
     private String imageUrl;
     private double price;
     private boolean active;

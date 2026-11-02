@@ -39,6 +39,12 @@ public class BusinessController {
         return businessService.getMyBusinesses();
     }
 
+    @GetMapping("/marketplace")
+    public BusinessService.MarketplaceBusinessDirectory getMarketplaceBusinesses(
+            @RequestParam(name = "q", required = false) String search) {
+        return businessService.getMarketplaceBusinesses(search);
+    }
+
     @GetMapping ("/{id}")
     public Business getBusinessById(@PathVariable Long id){
         return businessService.getBusinessById(id);

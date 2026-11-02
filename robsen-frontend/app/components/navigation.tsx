@@ -12,6 +12,7 @@ export default function Navigation() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [logoutError, setLogoutError] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isDashboard = pathname.startsWith("/dashboard");
   const visibleResources = resources.filter(
     (resource) =>
@@ -72,13 +73,15 @@ export default function Navigation() {
           <span>robsen</span>
         </Link>
 
+        {isDashboard ? <button aria-controls="dashboard-navigation-links" aria-expanded={mobileMenuOpen} aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"} className="dashboard-mobile-menu-toggle" onClick={() => setMobileMenuOpen((open) => !open)} type="button"><span aria-hidden="true">{mobileMenuOpen ? "×" : "☰"}</span></button> : null}
+
         {isDashboard ? (
-          <div className="navigation-links dashboard-navigation-links">
-            <Link href="/dashboard">Overview</Link>
-            <Link href="/dashboard/discover">Discover</Link>
-            {user?.superAdmin ? <Link href="/dashboard/admin">Administration</Link> : null}
+          <div className={`navigation-links dashboard-navigation-links${mobileMenuOpen ? " is-open" : ""}`} id="dashboard-navigation-links">
+            <Link href="/dashboard" aria-current={pathname === "/dashboard" ? "page" : undefined} onClick={() => setMobileMenuOpen(false)}>Overview</Link>
+            <Link href="/dashboard/discover" aria-current={pathname.startsWith("/dashboard/discover") ? "page" : undefined} onClick={() => setMobileMenuOpen(false)}>Discover</Link>
+            {user?.superAdmin ? <Link href="/dashboard/admin" aria-current={pathname.startsWith("/dashboard/admin") ? "page" : undefined} onClick={() => setMobileMenuOpen(false)}>Administration</Link> : null}
             {visibleResources.map((resource) => (
-              <Link href={`/dashboard/${resource.key}`} key={resource.key}>
+              <Link href={`/dashboard/${resource.key}`} aria-current={pathname.startsWith(`/dashboard/${resource.key}`) ? "page" : undefined} key={resource.key} onClick={() => setMobileMenuOpen(false)}>
                 {resource.label}
               </Link>
             ))}

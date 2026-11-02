@@ -1,5 +1,6 @@
 export type FieldKind =
   | "text"
+  | "image"
   | "email"
   | "password"
   | "number"
@@ -171,7 +172,7 @@ export const resources: ResourceDefinition[] = [
         endpoint: "product-categories",
       },
       { name: "description", label: "Description" },
-      { name: "imageUrl", label: "Image URL", kind: "text" },
+      { name: "imageUrl", label: "Product image", kind: "image" },
       { name: "price", label: "Price", kind: "number", required: true },
       { name: "active", label: "Active", kind: "boolean" },
     ],

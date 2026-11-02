@@ -77,6 +77,12 @@ public class SecurityConfiguration {
                                 HttpMethod.GET, "/api/business-memberships/invitations")
                         .authenticated()
                         .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/business/marketplace",
+                                "/api/product-listings/marketplace",
+                                "/api/distribution-opportunities/marketplace")
+                        .authenticated()
+                        .requestMatchers(
                                 HttpMethod.POST, "/api/business-memberships/invitations/*/accept")
                         .authenticated()
                         .requestMatchers("/api/**").access(dynamicApiAuthorizationManager())
@@ -113,6 +119,7 @@ public class SecurityConfiguration {
         if (path.equals("/api/product-listings/marketplace")
                 || path.equals("/api/distribution-opportunities/marketplace")) return "memberships";
         if (path.equals("/api/business/my")) return "memberships";
+        if (path.equals("/api/business/marketplace")) return "memberships";
         if (path.matches("/api/business/\\d+/dashboard")) return "memberships";
         if (path.matches("(?i)/api/business/\\d+/roles/MANAGER/permissions(?:/reset)?")) return "memberships";
         if (path.equals("/api/product-listings/businesses")) return "memberships";

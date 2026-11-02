@@ -2,26 +2,26 @@
   color-scheme: light;
 
   /* Brand palette */
-  --color-brand-50: #edf5f0;
-  --color-brand-100: #dbece2;
-  --color-brand-500: #267662;
-  --color-brand-600: #1c5a4b;
-  --color-brand-700: #17352e;
+  --color-brand-50: #eaf3ff;
+  --color-brand-100: #d6e8ff;
+  --color-brand-500: #0875f5;
+  --color-brand-600: #075fc8;
+  --color-brand-700: #0b2442;
 
   /* Semantic colors */
-  --color-ink: #18332e;
-  --color-text: #51635e;
-  --color-muted: #71817d;
-  --color-subtle: #84938d;
+  --color-ink: #102747;
+  --color-text: #435d7c;
+  --color-muted: #687f9c;
+  --color-subtle: #8295ad;
   --color-surface: #ffffff;
-  --color-surface-muted: #f8faf8;
-  --color-canvas: #fbfcfa;
-  --color-border: #e8eeea;
-  --color-border-strong: #dce6df;
+  --color-surface-muted: #f6f9fe;
+  --color-canvas: #f4f8fd;
+  --color-border: #e4edf8;
+  --color-border-strong: #d5e2f2;
   --color-danger: #92503e;
   --color-danger-soft: #fff8f5;
-  --color-success: #35574a;
-  --color-success-soft: #f5faf7;
+  --color-success: #138653;
+  --color-success-soft: #effaf5;
   --color-warning: #786b35;
   --color-warning-soft: #fbf8ec;
 
@@ -50,7 +50,7 @@
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
   --radius-pill: 999px;
-  --shadow-panel: 0 18px 50px rgba(30, 62, 50, 0.07), 0 2px 8px rgba(30, 62, 50, 0.03);
+  --shadow-panel: 0 12px 30px rgba(31, 69, 119, 0.07), 0 2px 7px rgba(31, 69, 119, 0.035);
   --page-gutter: clamp(1rem, 4vw, 2.5rem);
   --container-wide: 75rem;
   --container-content: 67.5rem;
