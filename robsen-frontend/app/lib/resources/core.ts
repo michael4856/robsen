@@ -1,0 +1,100 @@
+import type { ResourceDefinition } from "./types";
+export const BUSINESS_TYPE_OPTIONS = [
+  "MANUFACTURER",
+  "WHOLESALER",
+  "DISTRIBUTOR",
+  "RETAILER",
+  "IMPORTER",
+  "EXPORTER",
+  "SERVICE_PROVIDER",
+  "COOPERATIVE",
+  "OTHER",
+];
+
+
+export const businessesResource: ResourceDefinition = {
+    key: "businesses",
+    label: "Businesses",
+    singular: "business",
+    endpoint: "business",
+    listEndpoint: "business/all",
+    description: "Manage registered businesses and their verification status.",
+    deleteActionLabel: "Deactivate",
+    columns: ["legalName", "tradeName", "email", "businessType", "verificationStatus"],
+    fields: [
+      { name: "legalName", label: "Legal name", required: true },
+      { name: "tradeName", label: "Trading name" },
+      { name: "description", label: "Business description" },
+      { name: "tinNumber", label: "Tax ID" },
+      { name: "address", label: "Address" },
+      { name: "email", label: "Email", kind: "email" },
+      { name: "businessType", label: "Business type", kind: "enum", options: BUSINESS_TYPE_OPTIONS },
+      { name: "phoneNumber", label: "Phone" },
+      {
+        name: "verificationStatus",
+        label: "Verification status",
+        kind: "enum",
+        options: ["PENDING", "COMPLETED", "APPROVED", "REJECTED", "CONFIRMED", "CANCELLED"],
+        adminOnly: true,
+      },
+      { name: "active", label: "Active", kind: "boolean", adminOnly: true },
+    ],
+  };
+export const usersResource: ResourceDefinition = {
+    key: "users",
+    label: "Users",
+    singular: "user",
+    endpoint: "users",
+    listEndpoint: "users/all",
+    description: "Manage Robsen accounts and their access roles.",
+    adminOnly: true,
+    deleteActionLabel: "Deactivate",
+    columns: ["fullName", "email", "username", "role", "active"],
+    fields: [
+      { name: "fullName", label: "Full name", required: true },
+      { name: "email", label: "Email", kind: "email", required: true },
+      { name: "username", label: "Username", required: true },
+      { name: "password", label: "Password", kind: "password", required: true, createOnly: true },
+      { name: "password", label: "New password (leave blank to keep current)", kind: "password", updateOnly: true },
+      { name: "phoneNumber", label: "Phone" },
+      { name: "role", label: "Platform access", kind: "enum", options: ["USER", "SUPER_ADMIN"], required: true },
+      { name: "active", label: "Active", kind: "boolean" },
+    ],
+  };
+export const membershipsResource: ResourceDefinition = {
+    key: "memberships",
+    label: "Business memberships",
+    singular: "membership",
+    endpoint: "business-memberships",
+    listEndpoint: "business-memberships",
+    description: "Connect users to businesses with the appropriate role.",
+    deleteActionLabel: "Remove",
+    columns: ["id", "user", "business", "role", "status"],
+    fields: [
+      { name: "user", label: "User", kind: "relation", endpoint: "users/all", required: true },
+      { name: "business", label: "Business", kind: "relation", endpoint: "business/all", required: true },
+      { name: "role", label: "Role", kind: "role", required: true },
+      {
+        name: "status",
+        label: "Status",
+        kind: "enum",
+        options: ["INVITED", "ACTIVE", "SUSPENDED", "REMOVED"],
+      },
+    ],
+  };
+export const rolesResource: ResourceDefinition = {
+    key: "roles",
+    label: "Roles",
+    singular: "role",
+    endpoint: "roles",
+    listEndpoint: "roles/all",
+    description: "Create business roles and configure their resource-level permissions.",
+    adminOnly: true,
+    columns: ["name", "description", "permissions", "active"],
+    fields: [
+      { name: "name", label: "Name", required: true },
+      { name: "description", label: "Description" },
+      { name: "permissions", label: "Permissions", kind: "permissions" },
+      { name: "active", label: "Active", kind: "boolean" },
+    ],
+  };

@@ -1,0 +1,260 @@
+
+.onboarding-form .form-actions {
+  justify-content: flex-end;
+}
+
+.onboarding-alternatives {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.onboarding-alternatives > div {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #e5ece6;
+  border-radius: 9px;
+  background: #f8faf8;
+}
+
+.onboarding-alternatives h3 {
+  margin: 0 0 7px;
+  color: #2e4940;
+  font-size: 13px;
+}
+
+.onboarding-alternatives p {
+  margin: 0 0 12px;
+}
+
+.onboarding-alternatives .text-button {
+  display: inline-flex;
+}
+
+.membership-content > section + section {
+  margin-top: 20px;
+}
+
+.membership-search-form,
+.membership-invite-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.membership-email {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.membership-actions {
+  display: flex;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+.membership-permission-editor {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid #dce8df;
+  border-radius: 9px;
+  background: #f8faf8;
+}
+
+.membership-permission-editor h3 {
+  margin: 0 0 5px;
+  color: #2e4940;
+  font-size: 13px;
+}
+
+.membership-permission-editor p {
+  margin: 0;
+  color: #73817a;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.membership-permission-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.membership-permission-groups fieldset {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #e2e9e4;
+  border-radius: 7px;
+  background: #fff;
+}
+
+.membership-permission-groups legend {
+  padding: 0 4px;
+  color: #52665d;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.membership-permission-groups label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 5px 0;
+  color: #52665d;
+  font-size: 11px;
+  text-transform: capitalize;
+}
+
+.membership-permission-groups input {
+  accent-color: #3f7659;
+}
+
+.danger-text {
+  color: #a24e39;
+}
+
+.dashboard-success {
+  margin: 0 0 18px;
+  padding: 12px 15px;
+  border: 1px solid #cfe4d2;
+  border-radius: 8px;
+  background: #f3faf3;
+  color: #356b49;
+  font-size: 12px;
+}
+
+.business-selector {
+  display: flex;
+  width: min(340px, 100%);
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.dashboard-business-selector {
+  margin: 0 0 20px auto;
+}
+
+.business-summary {
+  margin: 0 0 25px;
+  padding: 20px;
+  border: 1px solid #e5ece6;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.business-summary-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.business-summary-title .dashboard-eyebrow {
+  margin-bottom: 6px;
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  text-transform: none;
+}
+
+.business-summary-title h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.verification-pill {
+  padding: 6px 10px;
+  border: 1px solid #e9e4cf;
+  border-radius: 999px;
+  background: #fbf8ec;
+  color: #786b35;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.verification-approved {
+  border-color: #d5e7dc;
+  background: #eef7f1;
+  color: #22614b;
+}
+
+.verification-rejected {
+  border-color: #f1d8cf;
+  background: #fff8f5;
+  color: #92503e;
+}
+
+.business-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.business-metric {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 12px;
+  border-radius: 7px;
+  background: #f8faf7;
+}
+
+.business-metric span {
+  color: #2b6b55;
+  font-size: 21px;
+  font-weight: 700;
+}
+
+.business-metric small {
+  color: #71817d;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.business-selector select {
+  min-width: 0;
+  flex: 1;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid #e1e9e3;
+  border-radius: 6px;
+  background: #fff;
+  color: #334a40;
+  font: inherit;
+}
+
+.invitation-panel {
+  margin-bottom: 24px;
+  padding: 20px;
+  border: 1px solid #dce9de;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.invitation-panel h2 {
+  margin: 0 0 14px;
+  color: #2e4940;
+  font-size: 16px;
+}
+
+.invitation-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 0;
+  border-top: 1px solid #edf1ed;
+}
+
+.invitation-row p {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  font-size: 12px;
+}

@@ -1,0 +1,345 @@
+
+.invitation-row p span {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.discover-toolbar {
+  width: min(440px, 100%);
+  margin: 0 0 20px;
+}
+
+.marketplace-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-md);
+}
+
+.marketplace-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.marketplace-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.marketplace-cover {
+  position: relative;
+  height: clamp(170px, 14vw, 220px);
+  overflow: hidden;
+  background: var(--surface-soft);
+}
+
+.marketplace-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 260ms ease;
+}
+
+.marketplace-card:hover .marketplace-cover img {
+  transform: scale(1.025);
+}
+
+.marketplace-cover-placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--brand);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--brand-soft) 72%, transparent), var(--surface-soft));
+}
+
+.marketplace-cover-placeholder > span[aria-hidden="true"] {
+  font-family: var(--font-display);
+  font-size: clamp(34px, 4vw, 52px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  opacity: 0.28;
+}
+
+.marketplace-category {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  max-width: calc(100% - 24px);
+  overflow: hidden;
+  padding: 6px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 999px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--font-xs);
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+}
+
+.marketplace-card-content {
+  display: flex;
+  min-height: 280px;
+  flex-direction: column;
+  padding: var(--space-md);
+}
+
+.supplier-line {
+  margin: 0 0 7px;
+  color: var(--brand);
+  font-size: var(--font-xs);
+  font-weight: 800;
+}
+
+.marketplace-card h2 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--font-lg);
+  line-height: 1.2;
+}
+
+.marketplace-description {
+  display: -webkit-box;
+  margin: 9px 0 16px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.marketplace-meta {
+  display: grid;
+  gap: 4px;
+  margin-top: auto;
+}
+
+.marketplace-meta small,
+.opportunity-expiry {
+  color: var(--muted);
+  font-size: var(--font-xs);
+}
+
+.listing-price {
+  color: var(--brand);
+  font-size: clamp(19px, 1.5vw, 24px);
+  line-height: 1.15;
+}
+
+.listing-price span {
+  color: var(--muted);
+  font-size: var(--font-xs);
+  font-weight: 500;
+}
+
+.marketplace-action {
+  display: grid;
+  grid-template-columns: minmax(80px, 0.8fr) minmax(120px, 1.2fr);
+  align-items: end;
+  gap: 10px;
+  margin-top: var(--space-md);
+}
+
+.marketplace-action .field-control {
+  margin: 0;
+}
+
+.marketplace-action .primary-button {
+  min-height: 40px;
+}
+
+.opportunity-discovery {
+  margin-top: 48px;
+}
+
+.opportunity-discovery .list-heading {
+  margin-bottom: 18px;
+}
+
+.opportunity-discovery h2 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--font-xl);
+}
+
+.opportunity-cover {
+  height: clamp(190px, 16vw, 240px);
+}
+
+.opportunity-card .marketplace-card-content {
+  min-height: 330px;
+}
+
+.opportunity-requirements {
+  display: grid;
+  gap: 3px;
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  line-height: 1.45;
+}
+
+.opportunity-requirements strong {
+  color: var(--ink);
+  font-size: var(--font-xs);
+}
+
+.opportunity-action {
+  grid-template-columns: 1fr;
+  margin-top: auto;
+  padding-top: var(--space-md);
+}
+
+.opportunity-action textarea {
+  min-height: 64px;
+  resize: vertical;
+}
+
+.network-feed {
+  margin: 28px 0 34px;
+  padding: 22px;
+  border: 1px solid #e4eae3;
+  border-radius: 12px;
+  background: #fbfcfa;
+}
+
+.network-feed .list-heading {
+  align-items: end;
+  margin-bottom: 18px;
+}
+
+.network-feed h2 {
+  margin: 0;
+  color: #1c3931;
+  font-size: 21px;
+}
+
+.network-feed .dashboard-subtitle {
+  margin: 6px 0 0;
+  font-size: 12px;
+}
+
+.network-feed-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr));
+  gap: 12px;
+}
+
+.network-feed-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #e8ede7;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.network-feed-card > span {
+  color: #66836d;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.network-feed-card h3 {
+  margin: 0;
+  color: #243f35;
+  font-size: 15px;
+}
+
+.network-feed-card strong {
+  color: #557160;
+  font-size: 11px;
+}
+
+.network-feed-card p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.network-feed-card a {
+  margin-top: auto;
+  padding-top: 8px;
+  color: #327459;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+@media (max-width: 640px) {
+  .network-feed {
+    padding: 16px;
+  }
+
+  .network-feed .list-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+}
+
+.field-control textarea {
+  min-height: 74px;
+  padding: 10px;
+  resize: vertical;
+}
+
+.dashboard-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 0 18px;
+  padding: 12px 15px;
+  border: 1px solid #f1d8cf;
+  border-radius: 8px;
+  background: #fff8f5;
+  color: #92503e;
+  font-size: 12px;
+}
+
+.dashboard-alert button {
+  border: 0;
+  background: transparent;
+  color: #784232;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  color: #88968f;
+  font-size: 11px;
+}
+
+.breadcrumb a {
+  color: #547c65;
+  font-weight: 600;
+}
+
+.list-heading {
+  align-items: center;
+  margin-bottom: 25px;
+}
