@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { apiFetch } from "@/app/lib/api-client";
 import type { UserProfile } from "@/app/lib/auth";
 import { ListingGrid, StatusBadge } from "@/app/components/ui";
+import BusinessTypeCheckboxes from "@/app/components/business-type-checkboxes";
+import { LocationMapInput } from "@/app/components/location-map-link";
 
 type Invitation = { id: number; business: { legalName: string; tradeName?: string | null }; role: { name: string } };
 type PublicOpportunity = {
@@ -16,6 +18,7 @@ type PublicOpportunity = {
   businessId: number;
   businessName: string;
   businessType?: string | null;
+  businessTypes?: string[];
   expiresAt?: string | null;
 };
 type PublicListing = {
@@ -33,10 +36,17 @@ type PublicListing = {
   minimumOrderQuantity: number;
   availableQuantity: number;
 };
-type PublicBusiness = { id: number; name: string; businessType?: string | null; description?: string | null; verificationStatus?: string | null };
+type PublicBusiness = { id: number; name: string; businessType?: string | null; businessTypes?: string[]; description?: string | null; verificationStatus?: string | null };
 type BusinessDirectory = { businesses: PublicBusiness[]; total: number };
 
 const PAGE_SIZE = 4;
+
+function businessTypeLabel(types?: string[], legacy?: string | null) {
+  const values = types?.length ? types : (legacy ?? "").split(",");
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))]
+    .map((type) => type.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()))
+    .join(", ") || "Business";
+}
 
 export default function NetworkHome({
   profile,
@@ -80,8 +90,6 @@ export default function NetworkHome({
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    setFeedError("");
     Promise.allSettled([
       apiFetch<PublicOpportunity[]>("distribution-opportunities/marketplace"),
       apiFetch<PublicListing[]>("product-listings/marketplace"),
@@ -115,9 +123,6 @@ export default function NetworkHome({
   useEffect(() => {
     const search = query.trim();
     if (search.length < 2) {
-      setBusinessResults([]);
-      setBusinessSearchError("");
-      setBusinessSearchLoading(false);
       return;
     }
     let active = true;
@@ -139,7 +144,7 @@ export default function NetworkHome({
 
   const territories = useMemo(() => [...new Set(opportunities.map((item) => item.territory?.trim()).filter((item): item is string => Boolean(item)))].sort((a, b) => a.localeCompare(b)), [opportunities]);
   const categories = useMemo(() => [...new Set(listings.map((item) => item.category?.trim()).filter((item): item is string => Boolean(item)))].sort((a, b) => a.localeCompare(b)), [listings]);
-  const businessTypes = useMemo(() => [...new Set(opportunities.map((item) => item.businessType?.trim()).filter((item): item is string => Boolean(item)))].sort((a, b) => a.localeCompare(b)), [opportunities]);
+  const businessTypes = useMemo(() => [...new Set(opportunities.flatMap((item) => item.businessTypes?.length ? item.businessTypes : (item.businessType ?? "").split("," )).map((item) => item.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [opportunities]);
   const territoryCounts = useMemo(() => opportunities.reduce<Record<string, number>>((counts, item) => {
     const name = item.territory?.trim();
     if (name) counts[name] = (counts[name] ?? 0) + 1;
@@ -157,7 +162,7 @@ export default function NetworkHome({
     const text = `${item.title} ${item.businessName} ${item.description ?? ""} ${item.territory ?? ""} ${item.businessType ?? ""}`.toLowerCase();
     if (query.trim() && !text.includes(query.trim().toLowerCase())) return false;
     if (territory && item.territory?.trim() !== territory) return false;
-    if (businessType && item.businessType !== businessType) return false;
+    if (businessType && !(item.businessTypes?.length ? item.businessTypes : (item.businessType ?? "").split(",")).includes(businessType)) return false;
     if (category && !(listingCategoriesByBusiness[item.businessId] ?? []).includes(category)) return false;
     return true;
   }).sort((a, b) => sort === "closing"
@@ -199,7 +204,7 @@ export default function NetworkHome({
       <div className="breadcrumb"><span>Workspace</span><span aria-hidden="true">/</span><span>Overview</span></div>
       {creationNotice ? <p className="dashboard-success" role="status">{creationNotice}</p> : null}
       {invitationError ? <p className="dashboard-alert" role="alert">{invitationError}</p> : null}
-      {query.trim().length >= 2 ? <section className="network-business-search-results" aria-label="Business search results" aria-live="polite"><div><strong>Businesses</strong>{businessSearchLoading ? <span>Searching…</span> : <span>{businessResults.length} matches</span>}</div>{businessSearchError ? <p role="alert">{businessSearchError}</p> : businessResults.length ? <ul>{businessResults.slice(0, 5).map((business) => <li key={business.id}><span className="network-business-mark" aria-hidden="true">{business.name.slice(0, 2).toUpperCase()}</span><span><strong>{business.name}</strong><small>{business.businessType?.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) || "Business"} · {businessStatusLabel(business.verificationStatus)}</small></span><Link href={`/dashboard/discover?search=${encodeURIComponent(business.name)}`}>View listings</Link></li>)}</ul> : !businessSearchLoading ? <p>No active business profiles matched that search.</p> : null}</section> : null}
+      {query.trim().length >= 2 ? <section className="network-business-search-results" aria-label="Business search results" aria-live="polite"><div><strong>Businesses</strong>{businessSearchLoading ? <span>Searching…</span> : <span>{businessResults.length} matches</span>}</div>{businessSearchError ? <p role="alert">{businessSearchError}</p> : businessResults.length ? <ul>{businessResults.slice(0, 5).map((business) => <li key={business.id}><span className="network-business-mark" aria-hidden="true">{business.name.slice(0, 2).toUpperCase()}</span><span><strong>{business.name}</strong><small>{businessTypeLabel(business.businessTypes, business.businessType)} · {businessStatusLabel(business.verificationStatus)}</small></span><Link href={`/dashboard/discover?search=${encodeURIComponent(business.name)}`}>View listings</Link></li>)}</ul> : !businessSearchLoading ? <p>No active business profiles matched that search.</p> : null}</section> : null}
       {matchingListings.length ? <section className="network-search-results" aria-label="Matching products"><strong>Matching products</strong>{matchingListings.map((item) => <div key={item.listingId}><span><b>{item.productName}</b><small>{item.supplierName}{item.category ? ` · ${item.category}` : ""}</small></span><Link href={`/dashboard/discover?search=${encodeURIComponent(query)}`}>View <span aria-hidden="true">→</span></Link></div>)}</section> : null}
       <div className="network-home-grid">
         <div className="network-home-main">
@@ -220,11 +225,11 @@ export default function NetworkHome({
             <form className="record-form onboarding-form" onSubmit={onCreateBusiness}>
               <label className="field-control"><span>Legal business name *</span><input autoComplete="organization" name="legalName" required /></label>
               <label className="field-control"><span>Trading name</span><input name="tradeName" /></label>
-              <label className="field-control"><span>Business type</span><select defaultValue="" name="businessType"><option value="">Choose a business type</option>{["MANUFACTURER", "WHOLESALER", "DISTRIBUTOR", "RETAILER", "IMPORTER", "EXPORTER", "SERVICE_PROVIDER", "COOPERATIVE", "OTHER"].map((type) => <option key={type} value={type}>{type.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase())}</option>)}</select></label>
+              <BusinessTypeCheckboxes />
               <label className="field-control"><span>Business description</span><textarea maxLength={2000} name="description" rows={3} /></label>
               <label className="field-control"><span>Business email</span><input autoComplete="email" name="email" type="email" /></label>
               <label className="field-control"><span>Phone</span><input autoComplete="tel" name="phoneNumber" /></label>
-              <label className="field-control"><span>Address</span><input autoComplete="street-address" name="address" /></label>
+              <LocationMapInput autoComplete="street-address" name="address" label="Address" />
               {createError ? <p className="form-error" role="alert">{createError}</p> : null}
               <div className="form-actions"><button className="primary-button" disabled={creating} type="submit">{creating ? "Creating…" : "Create business profile"}</button></div>
             </form>
@@ -235,11 +240,11 @@ export default function NetworkHome({
           <section className="network-opportunities-panel" id="opportunity-feed">
             <div className="network-feed-heading"><div className="network-opportunity-heading"><div className="network-opportunity-title-row"><h2>Distribution opportunities</h2><div className="network-feed-tabs" aria-label="Sort opportunities"><button className={sort === "newest" ? "selected" : ""} onClick={() => setFilter(setSort, "newest")} type="button">Recommended</button><button className={sort === "newest" ? "" : "selected"} onClick={() => setFilter(setSort, "closing")} type="button">Closing soon</button></div></div><p>Find businesses looking for partners across Ethiopia.</p></div><Link className="text-button" href="/dashboard/discover">Browse marketplace →</Link></div>
             <div className="network-feed-controls"><label><span>Territory</span><select onChange={(event) => setFilter(setTerritory, event.target.value)} value={territory}><option value="">All territories</option>{territories.map((item) => <option key={item} value={item}>{item}</option>)}</select></label><label><span>Category</span><select onChange={(event) => setFilter(setCategory, event.target.value)} value={category}><option value="">All categories</option>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</select></label><label><span>Business type</span><select onChange={(event) => setFilter(setBusinessType, event.target.value)} value={businessType}><option value="">All business types</option>{businessTypes.map((item) => <option key={item} value={item}>{item.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase())}</option>)}</select></label></div>
-            {feedError ? <div className="network-feed-error" role="alert"><span>{feedError}</span><button onClick={() => setRetryKey((value) => value + 1)} type="button">Retry</button></div> : null}
+            {feedError ? <div className="network-feed-error" role="alert"><span>{feedError}</span><button onClick={() => { setLoading(true); setFeedError(""); setRetryKey((value) => value + 1); }} type="button">Retry</button></div> : null}
             {loading ? <div className="network-feed-loading" aria-live="polite">Loading opportunities…</div> : !pageOpportunities.length ? <div className="network-feed-empty"><h3>{opportunities.length ? "No opportunities match these filters" : "No open opportunities yet"}</h3><p>{opportunities.length ? "Try a different search or filter to see more of the network." : "Explore public businesses and product listings while new partnerships are being published."}</p><Link className="text-button" href="/dashboard/discover">Explore product listings →</Link></div> : <ListingGrid className="network-opportunity-grid">{pageOpportunities.map((item) => {
               const categoriesForBusiness = listingCategoriesByBusiness[item.businessId] ?? [];
               return <article className="network-opportunity-card" key={item.id}>
-                <div className="network-opportunity-business"><span className="network-business-mark">{item.businessName.slice(0, 2).toUpperCase()}</span><div><strong>{item.businessName}</strong><small>{item.businessType?.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) || "Business"}</small></div><span className="network-verified-badge"><i aria-hidden="true">✓</i> Verified</span></div>
+                <div className="network-opportunity-business"><span className="network-business-mark">{item.businessName.slice(0, 2).toUpperCase()}</span><div><strong>{item.businessName}</strong><small>{businessTypeLabel(item.businessTypes, item.businessType)}</small></div><span className="network-verified-badge"><i aria-hidden="true">✓</i> Verified</span></div>
                 <h3>{item.title}</h3><p className="network-opportunity-description">{item.description || "A verified business is looking for distribution partners."}</p>
                 <div className="network-opportunity-tags">{item.territory ? <span>⌖ {item.territory}</span> : null}{categoriesForBusiness.slice(0, 1).map((name) => <span key={name}>◇ {name}</span>)}<span className="network-open-tag">Open</span></div>
                 <div className="network-opportunity-footer"><small>{item.expiresAt ? `Applications close ${new Date(item.expiresAt).toLocaleDateString()}` : "Applications open"}</small><Link className="primary-button" href={`/dashboard/discover#opportunity-${item.id}`}>View opportunity <span aria-hidden="true">→</span></Link></div>
@@ -267,7 +272,7 @@ export default function NetworkHome({
                 <details className="sample-business-profile"><summary>View business profile</summary><div><p><b>About</b><br />GreenHarvest Trading connects Ethiopian growers with shops, restaurants, and distributors. The sample profile demonstrates how business details, products, and service regions appear.</p><p><b>Available products</b><br />Teff flour · Arabica coffee · Wildflower honey</p><p><b>Service territories</b><br />Addis Ababa · Oromia · Amhara</p><span>Example content for preview only. This is not a live marketplace listing.</span></div></details>
               </div>
             </article>
-            {loading ? <p className="network-products-empty">Loading businesses…</p> : publicBusinesses.length ? <ListingGrid className="network-directory-grid">{publicBusinesses.slice(0, 8).map((business) => { const status = business.verificationStatus?.toUpperCase(); const statusClass = status === "APPROVED" || status === "COMPLETED" ? "is-complete" : status === "REJECTED" || status === "CANCELLED" ? "is-rejected" : "is-pending"; return <article className="network-directory-card" key={business.id}><div className="network-directory-identity"><span className="network-business-mark" aria-hidden="true">{business.name.slice(0, 2).toUpperCase()}</span><div><strong>{business.name}{status === "APPROVED" ? <span className="network-business-check" aria-label="Verified">✓</span> : null}</strong><small>{business.businessType?.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) || "Business"}</small></div></div><StatusBadge tone={statusClass === "is-complete" ? "success" : statusClass === "is-rejected" ? "danger" : "warning"} className={`network-business-status ${statusClass}`}>{businessStatusLabel(status)}</StatusBadge><p>{business.description || "Business profile in the Robsen network."}</p><Link aria-label={`View profile and listings from ${business.name}`} href={`/dashboard/discover?search=${encodeURIComponent(business.name)}`}>View profile <span aria-hidden="true">→</span></Link></article>; })}</ListingGrid> : !loading ? <p className="network-products-empty">No active business profiles are available yet. The sample profile above is a preview.</p> : null}
+            {loading ? <p className="network-products-empty">Loading businesses…</p> : publicBusinesses.length ? <ListingGrid className="network-directory-grid">{publicBusinesses.slice(0, 8).map((business) => { const status = business.verificationStatus?.toUpperCase(); const statusClass = status === "APPROVED" || status === "COMPLETED" ? "is-complete" : status === "REJECTED" || status === "CANCELLED" ? "is-rejected" : "is-pending"; return <article className="network-directory-card" key={business.id}><div className="network-directory-identity"><span className="network-business-mark" aria-hidden="true">{business.name.slice(0, 2).toUpperCase()}</span><div><strong>{business.name}{status === "APPROVED" ? <span className="network-business-check" aria-label="Verified">✓</span> : null}</strong><small>{businessTypeLabel(business.businessTypes, business.businessType)}</small></div></div><StatusBadge tone={statusClass === "is-complete" ? "success" : statusClass === "is-rejected" ? "danger" : "warning"} className={`network-business-status ${statusClass}`}>{businessStatusLabel(status)}</StatusBadge><p>{business.description || "Business profile in the Robsen network."}</p><Link aria-label={`View profile and listings from ${business.name}`} href={`/dashboard/discover?search=${encodeURIComponent(business.name)}`}>View profile <span aria-hidden="true">→</span></Link></article>; })}</ListingGrid> : !loading ? <p className="network-products-empty">No active business profiles are available yet. The sample profile above is a preview.</p> : null}
           </section>
         </div>
 

@@ -4,10 +4,13 @@ import Link from "next/link";
 import { type FormEvent, useEffect, useState } from "react";
 import ProtectedArea, { useAuthProfile } from "@/app/components/protected-area";
 import NetworkHome from "@/app/components/network-home";
+import BusinessTypeCheckboxes from "@/app/components/business-type-checkboxes";
+import BusinessBranchManager from "@/app/components/business-branch-manager";
+import { LocationMapInput } from "@/app/components/location-map-link";
 import { Alert, ListingGrid } from "@/app/components/ui";
 import { apiFetch } from "@/app/lib/api-client";
 import { ACTIVE_BUSINESS_STORAGE_KEY } from "@/app/lib/auth";
-import { BUSINESS_TYPE_OPTIONS, resources } from "@/app/lib/resources";
+import { resources } from "@/app/lib/resources";
 
 type PendingInvitation = {
   id: number;
@@ -19,6 +22,7 @@ type BusinessSummary = {
   legalName: string;
   tradeName?: string | null;
   businessType?: string | null;
+  businessTypes?: string[];
   verificationStatus?: string | null;
   membershipRole?: string | null;
 };
@@ -215,16 +219,21 @@ function DashboardContent() {
 
   async function createBusiness(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setCreating(true);
     setCreateError("");
     const formData = new FormData(event.currentTarget);
+    const businessTypes = formData.getAll("businessTypes").filter((value): value is string => typeof value === "string");
+    if (businessTypes.length === 0) {
+      setCreateError("Select at least one business type.");
+      return;
+    }
+    setCreating(true);
     try {
       const response = await apiFetch("business", {
         method: "POST",
         body: JSON.stringify({
           legalName: formData.get("legalName"),
           tradeName: formData.get("tradeName"),
-          businessType: formData.get("businessType"),
+          businessTypes,
           email: formData.get("email"),
           phoneNumber: formData.get("phoneNumber"),
           address: formData.get("address"),
@@ -285,6 +294,13 @@ function DashboardContent() {
           <Alert tone="danger" className="dashboard-alert">
             {error}
           </Alert>
+        ) : null}
+        {selectedBusiness && (profile?.superAdmin || profile?.permissions.includes("businesses:READ")) ? (
+          <BusinessBranchManager
+            businessId={selectedBusiness.id}
+            canManage={Boolean(profile?.superAdmin || profile?.permissions.includes("businesses:UPDATE"))}
+            key={selectedBusiness.id}
+          />
         ) : null}
         {creationNotice ? <p className="dashboard-success" role="status">{creationNotice}</p> : null}
 
@@ -370,11 +386,11 @@ function DashboardContent() {
               <form className="record-form onboarding-form" onSubmit={createBusiness}>
                 <label className="field-control"><span>Legal business name *</span><input autoComplete="organization" name="legalName" required /></label>
                 <label className="field-control"><span>Trading name</span><input name="tradeName" /></label>
-                <label className="field-control"><span>Business type</span><select defaultValue="" name="businessType"><option value="">Choose a business type</option>{BUSINESS_TYPE_OPTIONS.map((type) => <option key={type} value={type}>{humanizeBusinessType(type)}</option>)}</select></label>
+                <BusinessTypeCheckboxes />
                 <label className="field-control"><span>What does your business do?</span><textarea maxLength={2000} name="description" rows={3} /></label>
                 <label className="field-control"><span>Business email</span><input autoComplete="email" name="email" type="email" /></label>
                 <label className="field-control"><span>Phone</span><input autoComplete="tel" name="phoneNumber" /></label>
-                <label className="field-control"><span>Address</span><input autoComplete="street-address" name="address" /></label>
+                <LocationMapInput autoComplete="street-address" name="address" label="Address" />
                 {createError ? <p className="form-error" role="alert">{createError}</p> : null}
                 <div className="form-actions"><button className="primary-button" disabled={creating} type="submit">{creating ? "Creating…" : "Create business"}</button></div>
               </form>
@@ -445,9 +461,6 @@ function BusinessNewsFeed() {
   </section>;
 }
 
-function humanizeBusinessType(type: string) {
-  return type.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
 
 function Metric({ label, value }: { label: string; value: number }) {
   return <div className="business-metric"><span>{value}</span><small>{label}</small></div>;

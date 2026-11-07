@@ -86,6 +86,14 @@
 .pagination-buttons button:focus-visible { outline: 3px solid color-mix(in srgb, var(--color-brand-500) 24%, transparent); outline-offset: 2px; }
 .records-table .ui-status-badge { font-size: 13px; }
 .records-table .membership-email { color: var(--color-muted); font-size: 13px; }
+.table-pagination { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 20px; border-top:1px solid var(--color-border); color:var(--color-muted); font-size:13px; }
+.pagination-size { display:flex; align-items:center; gap:8px; }
+.pagination-size select { border:1px solid var(--color-border); border-radius:8px; background:#fff; padding:6px 8px; color:var(--color-ink); }
+.pagination-controls,.pagination-page-item { display:flex; align-items:center; gap:4px; }
+.pagination-controls button { min-width:32px; height:32px; border:1px solid var(--color-border); border-radius:8px; background:#fff; color:var(--color-ink); }
+.pagination-controls button[aria-current="page"] { border-color:var(--color-primary); background:var(--color-primary); color:#fff; }
+.pagination-controls button:disabled { opacity:.45; cursor:not-allowed; }
+@media (max-width:640px) { .table-pagination { flex-wrap:wrap; padding:12px; } .pagination-range { width:100%; } .pagination-controls { margin-left:auto; } }
 .records-table .product-status-badge[data-tone="success"] { background: var(--color-success-soft); color: var(--color-success); }
 .records-table .product-status-badge[data-tone="success"] i { background: var(--color-success); }
 

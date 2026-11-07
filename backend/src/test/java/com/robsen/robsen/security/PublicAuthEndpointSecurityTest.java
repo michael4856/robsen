@@ -2,8 +2,8 @@ package com.robsen.robsen.security;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,12 +11,26 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import com.robsen.robsen.business.BusinessService;
+import com.robsen.robsen.distributionOpportunity.DistributionOpportunityService;
+import com.robsen.robsen.productListing.ProductListingService;
 
 @SpringBootTest(properties = "app.jwt.secret=test-secret-for-robsen-jwt-tests-only-32chars")
 @AutoConfigureMockMvc
 class PublicAuthEndpointSecurityTest {
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private BusinessService businessService;
+
+    @MockitoBean
+    private ProductListingService productListingService;
+
+    @MockitoBean
+    private DistributionOpportunityService distributionOpportunityService;
 
     @Test
     void registrationDoesNotRequireAuthentication() throws Exception {
@@ -49,5 +63,15 @@ class PublicAuthEndpointSecurityTest {
     void nonPostRequestsToRegistrationAreNotPublic() throws Exception {
         mockMvc.perform(get("/api/auth/register"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void marketplaceFeedsArePublic() throws Exception {
+        mockMvc.perform(get("/api/business/marketplace"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/product-listings/marketplace"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/distribution-opportunities/marketplace"))
+                .andExpect(status().isOk());
     }
 }

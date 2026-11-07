@@ -1,7 +1,6 @@
 import { apiFetch } from "@/app/lib/api-client";
 import { resources, type FieldDefinition } from "@/app/lib/resources";
 import { DROPDOWN_SOURCES } from "./dropdown-options";
-import { humanize } from "./format";
 import type { FormValue, RecordValue } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -46,7 +45,7 @@ export function defaultValues(fields: FieldDefinition[]): Record<string, FormVal
   return Object.fromEntries(
     fields.map((field) => {
       if (field.kind === "boolean") return [field.name, true];
-      if (field.kind === "navigation" || field.kind === "permissions") {
+      if (field.kind === "navigation" || field.kind === "permissions" || field.kind === "checkboxes") {
         return [field.name, []];
       }
       return [field.name, ""];
@@ -68,7 +67,7 @@ export function valuesFromRecord(fields: FieldDefinition[], record: RecordValue)
     const value = record[field.name];
     if (field.kind === "password") {
       values[field.name] = "";
-    } else if (field.kind === "navigation" || field.kind === "permissions") {
+    } else if (field.kind === "navigation" || field.kind === "permissions" || field.kind === "checkboxes") {
       values[field.name] = Array.isArray(value) ? value.map(String) : [];
     } else if (isRelationKind(field.kind)) {
       // Accept { id } or { id, name } or plain scalar.
@@ -108,8 +107,12 @@ export async function toRequestBody(
 
     if (kind === "boolean") {
       body[field.name] = Boolean(value);
-    } else if (kind === "navigation" || kind === "permissions") {
-      body[field.name] = Array.isArray(value) ? value : [];
+    } else if (kind === "navigation" || kind === "permissions" || kind === "checkboxes") {
+      const selectedValues = Array.isArray(value) ? value : [];
+      if (field.required && selectedValues.length === 0) {
+        throw new Error(`Select at least one ${field.label.toLowerCase()}.`);
+      }
+      body[field.name] = selectedValues;
     } else if (isRelationKind(kind) || kind === "role" || DROPDOWN_SOURCES[kind]) {
       const source = DROPDOWN_SOURCES[kind];
       const asRelation = kind === "relation" || source?.asRelation === true;

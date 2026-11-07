@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -26,7 +27,12 @@ public class BusinessController {
         business.setLegalName(request.legalName().trim());
         business.setTradeName(trimToNull(request.tradeName()));
         business.setDescription(trimToNull(request.description()));
-        business.setBusinessType(trimToNull(request.businessType()));
+        business.setBusinessTypes(request.businessTypes() == null
+                ? (request.businessType() == null ? List.of() : List.of(request.businessType()))
+                : request.businessTypes());
+        if (business.getBusinessTypes().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Select at least one business type.");
+        }
         business.setEmail(trimToNull(request.email()));
         business.setPhoneNumber(trimToNull(request.phoneNumber()));
         business.setAddress(trimToNull(request.address()));
@@ -80,6 +86,7 @@ public class BusinessController {
             @NotBlank @Size(max = 255) String legalName,
             @Size(max = 255) String tradeName,
             @Size(max = 2000) String description,
+            List<String> businessTypes,
             @Size(max = 100) String businessType,
             @Email @Size(max = 255) String email,
             @Size(max = 50) String phoneNumber,

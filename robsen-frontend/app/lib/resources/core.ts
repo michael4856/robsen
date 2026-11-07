@@ -20,7 +20,7 @@ export const businessesResource: ResourceDefinition = {
     listEndpoint: "business/all",
     description: "Manage registered businesses and their verification status.",
     deleteActionLabel: "Deactivate",
-    columns: ["legalName", "tradeName", "email", "businessType", "verificationStatus"],
+    columns: ["legalName", "tradeName", "email", "businessTypes", "address", "verificationStatus"],
     fields: [
       { name: "legalName", label: "Legal name", required: true },
       { name: "tradeName", label: "Trading name" },
@@ -28,7 +28,7 @@ export const businessesResource: ResourceDefinition = {
       { name: "tinNumber", label: "Tax ID" },
       { name: "address", label: "Address" },
       { name: "email", label: "Email", kind: "email" },
-      { name: "businessType", label: "Business type", kind: "enum", options: BUSINESS_TYPE_OPTIONS },
+      { name: "businessTypes", label: "Business types", kind: "checkboxes", options: BUSINESS_TYPE_OPTIONS, required: true },
       { name: "phoneNumber", label: "Phone" },
       {
         name: "verificationStatus",

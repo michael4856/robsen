@@ -22,9 +22,12 @@ export default function ProtectedArea({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    void renewSessionIfDue();
     fetch("/api/auth/me", { cache: "no-store" })
       .then(async (response) => {
+        if (response.status === 204) {
+          router.replace("/");
+          return;
+        }
         if (response.status === 401) {
           const result = (await response.json().catch(() => null)) as
             | { code?: string; message?: string }
@@ -58,6 +61,7 @@ export default function ProtectedArea({ children }: { children: ReactNode }) {
         }
         if (active) setProfile(result);
         if (active) setStatus("ready");
+        void renewSessionIfDue();
       })
       .catch((requestError: unknown) => {
         if (active) {

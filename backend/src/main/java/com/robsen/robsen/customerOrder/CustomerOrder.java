@@ -1,6 +1,7 @@
 package com.robsen.robsen.customerOrder;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 import com.robsen.robsen.business.Business;
 
@@ -22,7 +23,14 @@ public class CustomerOrder {
     private Business supplierBusiness;
     private String orderNumber;
     private String status;
-    private double subtotal;
+    @Column(nullable = false, precision = 19, scale = 4)
+    private BigDecimal subtotal = BigDecimal.ZERO;
+    @Column(length = 2000)
+    private String rejectionReason;
+    @Column(length = 2000)
+    private String processingRemarks;
+    @Column(name = "quotation_id")
+    private Long quotationId;
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 }

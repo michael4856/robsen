@@ -68,6 +68,7 @@ public class BusinessService {
                         membership.getBusiness().getLegalName(),
                         membership.getBusiness().getTradeName(),
                         membership.getBusiness().getBusinessType(),
+                        membership.getBusiness().getBusinessTypes(),
                         membership.getBusiness().getVerificationStatus(),
                         membership.getId(),
                         membership.getRole() == null ? null : membership.getRole().getName(),
@@ -142,6 +143,7 @@ public class BusinessService {
                         business.getId(),
                         business.getTradeName() == null ? business.getLegalName() : business.getTradeName(),
                         business.getBusinessType(),
+                        business.getBusinessTypes(),
                         business.getDescription(),
                         business.getVerificationStatus() == null ? null : business.getVerificationStatus().name()))
                 .toList();
@@ -163,14 +165,15 @@ public class BusinessService {
         oldBusiness.setLegalName(updatedBusiness.getLegalName());
         oldBusiness.setTradeName(updatedBusiness.getTradeName());
         oldBusiness.setDescription(updatedBusiness.getDescription());
-        oldBusiness.setBusinessType(updatedBusiness.getBusinessType());
+        oldBusiness.setBusinessTypes(updatedBusiness.getBusinessTypes());
+        if (oldBusiness.getBusinessTypes().isEmpty()) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "Select at least one business type.");
+        }
         oldBusiness.setAddress(updatedBusiness.getAddress());
         oldBusiness.setPhoneNumber(updatedBusiness.getPhoneNumber());
         oldBusiness.setEmail(updatedBusiness.getEmail());
-        if (businessAccess.isSuperAdmin()) {
-            oldBusiness.setVerificationStatus(updatedBusiness.getVerificationStatus());
-            oldBusiness.setActive(updatedBusiness.isActive());
-        }
+        if (businessAccess.isSuperAdmin()) oldBusiness.setActive(updatedBusiness.isActive());
         return ResponseEntity.ok(businessRepo.save(oldBusiness));
     }
 
@@ -203,6 +206,7 @@ public class BusinessService {
             String legalName,
             String tradeName,
             String businessType,
+            List<String> businessTypes,
             com.robsen.robsen.common.Status verificationStatus,
             Long membershipId,
             String membershipRole,
@@ -212,6 +216,7 @@ public class BusinessService {
             Long id,
             String name,
             String businessType,
+            List<String> businessTypes,
             String description,
             String verificationStatus) {}
 

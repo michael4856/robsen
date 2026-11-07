@@ -25,6 +25,10 @@ export default function Navigation() {
     const loadUser = () => {
       fetch("/api/auth/me", { cache: "no-store" })
         .then(async (response) => {
+        if (response.status === 204) {
+          if (active) setUser(null);
+          return;
+        }
         if (response.ok) {
           const result = (await response.json()) as UserProfile;
           if (active) setUser(result);
@@ -80,6 +84,9 @@ export default function Navigation() {
             <Link href="/dashboard" aria-current={pathname === "/dashboard" ? "page" : undefined} onClick={() => setMobileMenuOpen(false)}>Overview</Link>
             <Link href="/dashboard/discover" aria-current={pathname.startsWith("/dashboard/discover") ? "page" : undefined} onClick={() => setMobileMenuOpen(false)}>Discover</Link>
             {user?.superAdmin ? <Link href="/dashboard/admin" aria-current={pathname.startsWith("/dashboard/admin") ? "page" : undefined} onClick={() => setMobileMenuOpen(false)}>Administration</Link> : null}
+            {user?.businessIds.length ? <Link href="/dashboard/verification" aria-current={pathname.startsWith("/dashboard/verification") ? "page" : undefined} onClick={() => setMobileMenuOpen(false)}>Verification</Link> : null}
+            {user?.permissions.includes("product-listings:READ") ? <Link href="/dashboard/inventory" aria-current={pathname.startsWith("/dashboard/inventory") ? "page" : undefined} onClick={() => setMobileMenuOpen(false)}>Inventory</Link> : null}
+            {user?.permissions.some((permission) => permission.startsWith("quotation-requests:") || permission.startsWith("supplier-quotations:")) ? <Link href="/dashboard/quotations" aria-current={pathname.startsWith("/dashboard/quotations") ? "page" : undefined} onClick={() => setMobileMenuOpen(false)}>RFQs &amp; quotations</Link> : null}
             {visibleResources.map((resource) => (
               <Link href={`/dashboard/${resource.key}`} aria-current={pathname.startsWith(`/dashboard/${resource.key}`) ? "page" : undefined} key={resource.key} onClick={() => setMobileMenuOpen(false)}>
                 {resource.label}

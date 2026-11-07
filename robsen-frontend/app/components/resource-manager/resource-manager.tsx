@@ -6,12 +6,13 @@ import ProtectedArea, { useAuthProfile } from "@/app/components/protected-area";
 import { apiFetch } from "@/app/lib/api-client";
 import { StatusBadge } from "@/app/components/ui";
 import { ACTIVE_BUSINESS_STORAGE_KEY, hasPermission } from "@/app/lib/auth";
-import { findResource, resources, type ResourceDefinition } from "@/app/lib/resources";
+import { findResource, type ResourceDefinition } from "@/app/lib/resources";
 import { FieldInput } from "./field-input";
 import { ProductCatalog, ProductCatalogSummary } from "./product-catalog";
 import { defaultValues, formatValue, isDropdownColumn, loadRecords, statusTone, toRequestBody, valuesFromRecord } from "./record-utils";
 import { humanize } from "./format";
 import type { BusinessContextOption, FormValue, RecordValue } from "./types";
+import LocationMapLink, { isLocationField } from "../location-map-link";
 
 export default function ResourceManager({ resourceKey }: { resourceKey: string }) {
   const resource = findResource(resourceKey);
@@ -49,6 +50,8 @@ function ResourceContent({ resource }: { resource: ResourceDefinition }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [pageSize, setPageSize] = useState(10);
+  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<RecordValue | null>(null);
   const [formValues, setFormValues] = useState<Record<string, FormValue>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -188,6 +191,12 @@ function ResourceContent({ resource }: { resource: ResourceDefinition }) {
     });
   }, [records, resource.columns, search, columnFilters]);
 
+  const totalPages = Math.max(1, Math.ceil(visibleRecords.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageRecords = visibleRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const firstRecord = visibleRecords.length ? (currentPage - 1) * pageSize + 1 : 0;
+  const lastRecord = Math.min(currentPage * pageSize, visibleRecords.length);
+
   function canEditRecord(record: RecordValue) {
     if (!canUpdate) return false;
     if (profile?.superAdmin || !["products", "product-categories"].includes(resource.key)) return true;
@@ -255,6 +264,24 @@ function ResourceContent({ resource }: { resource: ResourceDefinition }) {
     }
   }
 
+  async function approveBusiness(record: RecordValue) {
+    const id = record[resource.idField ?? "id"];
+    if (id === undefined) return;
+    setError("");
+    try {
+      const values = valuesFromRecord(resource.fields, record);
+      const payload = await toRequestBody(resource.fields, values, true);
+      payload.verificationStatus = "APPROVED";
+      await apiFetch(`${resource.endpoint}/${encodeURIComponent(String(id))}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+      await reload();
+    } catch (approvalError) {
+      setError(approvalError instanceof Error ? approvalError.message : "Could not approve this business.");
+    }
+  }
+
   return (
     <main className="dashboard-page">
       <div className="dashboard-content">
@@ -293,6 +320,7 @@ function ResourceContent({ resource }: { resource: ResourceDefinition }) {
                     onChange={(event) => {
                       setIsLoading(true);
                       setSelectedBusinessId(event.target.value);
+                      setPage(1);
                       window.sessionStorage.setItem(ACTIVE_BUSINESS_STORAGE_KEY, event.target.value);
                       setRecords([]);
                       setIsFormOpen(false);
@@ -401,7 +429,7 @@ function ResourceContent({ resource }: { resource: ResourceDefinition }) {
                 <input
                   aria-label={`Search ${resource.label.toLowerCase()}`}
                   className="search-input"
-                  onChange={(event) => setSearch(event.target.value)}
+                  onChange={(event) => { setSearch(event.target.value); setPage(1); }}
                   placeholder="Search records"
                   type="search"
                   value={search}
@@ -415,10 +443,10 @@ function ResourceContent({ resource }: { resource: ResourceDefinition }) {
                       <span>{humanize(column)}</span>
                       <select
                         onChange={(event) =>
-                          setColumnFilters((current) => ({
+                          { setPage(1); setColumnFilters((current) => ({
                             ...current,
                             [column]: event.target.value,
-                          }))
+                          })); }
                         }
                         value={columnFilters[column] ?? ""}
                       >
@@ -434,7 +462,7 @@ function ResourceContent({ resource }: { resource: ResourceDefinition }) {
                   {Object.values(columnFilters).some(Boolean) ? (
                     <button
                       className="secondary-button"
-                      onClick={() => setColumnFilters({})}
+                      onClick={() => { setColumnFilters({}); setPage(1); }}
                       type="button"
                     >
                       Clear filters
@@ -463,7 +491,7 @@ function ResourceContent({ resource }: { resource: ResourceDefinition }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {visibleRecords.map((record, index) => (
+                      {pageRecords.map((record, index) => (
                         <tr key={String(record[resource.idField ?? "id"] ?? index)}>
                           {resource.columns.map((column) => (
                             <td key={column}>
@@ -471,6 +499,11 @@ function ResourceContent({ resource }: { resource: ResourceDefinition }) {
                                 <StatusBadge tone={statusTone(record[column])}>
                                   {formatValue(record[column])}
                                 </StatusBadge>
+                              ) : isLocationField(column) && formatValue(record[column]) !== "—" ? (
+                                <span className="location-cell">
+                                  {formatValue(record[column])}
+                                  <LocationMapLink location={formatValue(record[column])} />
+                                </span>
                               ) : formatValue(record[column])}
                             </td>
                           ))}
@@ -479,6 +512,12 @@ function ResourceContent({ resource }: { resource: ResourceDefinition }) {
                               {canEditRecord(record) ? (
                                 <button onClick={() => startEdit(record)} type="button">
                                   Edit
+                                </button>
+                              ) : null}
+                              {resource.key === "businesses" && canEditRecord(record) &&
+                                !["APPROVED", "CONFIRMED"].includes(String(record.verificationStatus ?? "").toUpperCase()) ? (
+                                <button onClick={() => void approveBusiness(record)} type="button">
+                                  Approve
                                 </button>
                               ) : null}
                               {canDelete && resource.deletable !== false ? (
@@ -498,6 +537,25 @@ function ResourceContent({ resource }: { resource: ResourceDefinition }) {
                   </table>
                 </div>
               )}
+              {!isLoading && visibleRecords.length > 0 ? (
+                <div className="table-pagination" aria-label="Table pagination">
+                  <span className="pagination-range">Showing {firstRecord}–{lastRecord} of {visibleRecords.length} records</span>
+                  <label className="pagination-size">Rows per page
+                    <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}>
+                      {[10, 25, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}
+                    </select>
+                  </label>
+                  <div className="pagination-controls">
+                    <button aria-label="First page" disabled={currentPage === 1} onClick={() => setPage(1)} type="button">«</button>
+                    <button aria-label="Previous page" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)} type="button">‹</button>
+                    {Array.from({ length: totalPages }, (_, index) => index + 1).filter((number) => number === 1 || number === totalPages || Math.abs(number - currentPage) <= 1).map((number, index, pages) => (
+                      <span className="pagination-page-item" key={number}>{index > 0 && number - pages[index - 1] > 1 ? <span aria-hidden="true">…</span> : null}<button aria-current={currentPage === number ? "page" : undefined} onClick={() => setPage(number)} type="button">{number}</button></span>
+                    ))}
+                    <button aria-label="Next page" disabled={currentPage === totalPages} onClick={() => setPage(currentPage + 1)} type="button">›</button>
+                    <button aria-label="Last page" disabled={currentPage === totalPages} onClick={() => setPage(totalPages)} type="button">»</button>
+                  </div>
+                </div>
+              ) : null}
             </section> : isProductsPage ? null : <section className="dashboard-empty-state"><h2>Record browsing is not enabled</h2><p>You can use the actions granted to you on this page. Ask the business owner for read access if you need to browse existing {resource.label.toLowerCase()}.</p></section>}
           </>
         )}
@@ -505,4 +563,3 @@ function ResourceContent({ resource }: { resource: ResourceDefinition }) {
     </main>
   );
 }
-

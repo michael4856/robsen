@@ -124,4 +124,25 @@ class BusinessServiceTest {
         assertEquals(MembershipStatus.ACTIVE, result.get(0).membershipStatus());
         verify(membershipRepo).findByUserIdAndStatus(7L, MembershipStatus.ACTIVE);
     }
+
+    @Test
+    void acceptsAndReturnsMultipleBusinessTypesWhileKeepingLegacyFieldReadable() {
+        Business business = new Business();
+
+        business.setBusinessTypes(List.of("manufacturer", "IMPORTER", "manufacturer"));
+
+        assertEquals(List.of("MANUFACTURER", "IMPORTER"), business.getBusinessTypes());
+        assertEquals("MANUFACTURER,IMPORTER", business.getBusinessType());
+    }
+
+    @Test
+    void rejectsUnsupportedBusinessTypes() {
+        Business business = new Business();
+
+        org.springframework.web.server.ResponseStatusException error =
+                org.junit.jupiter.api.Assertions.assertThrows(
+                org.springframework.web.server.ResponseStatusException.class,
+                () -> business.setBusinessTypes(List.of("UNKNOWN_TYPE")));
+        assertEquals(org.springframework.http.HttpStatus.BAD_REQUEST, error.getStatusCode());
+    }
 }

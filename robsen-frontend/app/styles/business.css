@@ -258,3 +258,83 @@
   margin: 0;
   font-size: 12px;
 }
+
+.membership-content {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.membership-content :is(h1, h2, h3) {
+  font-family: inherit;
+  letter-spacing: normal;
+}
+
+.membership-content .dashboard-eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.membership-content .dashboard-subtitle {
+  font-size: 15px;
+}
+
+.membership-content .list-heading h1 {
+  font-size: 30px;
+  font-weight: 600;
+}
+
+.membership-content .editor-heading h2,
+.membership-content .records-toolbar h2 {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.membership-content .field-control {
+  font-size: 14px;
+}
+
+.membership-content .field-control input,
+.membership-content .field-control select,
+.membership-content .field-control textarea {
+  font-size: 15px;
+}
+
+.membership-content :is(.primary-button, .secondary-button) {
+  font-size: 14px;
+}
+
+.manager-permission-settings .permission-help {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.manager-permission-settings .membership-permission-groups {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: 12px;
+}
+
+.manager-permission-settings .membership-permission-groups legend {
+  font-size: 13px;
+}
+
+.manager-permission-settings .membership-permission-groups label {
+  align-items: flex-start;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.membership-content .membership-email,
+.membership-content .records-toolbar span {
+  font-size: 14px;
+}
+
+.membership-content .records-table thead th {
+  font-size: 13px;
+}
+
+.membership-content .records-table tbody td {
+  font-size: 15px;
+}
+
+.membership-content .membership-actions button {
+  font-size: 14px;
+}

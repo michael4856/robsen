@@ -112,6 +112,10 @@ function AdminContent() {
               <span className="resource-card-link">Manage <span aria-hidden="true">↗</span></span>
             </Link>
           ))}
+          <Link className="admin-card" href="/dashboard/admin/verifications">
+            <span className="admin-card-count">Review</span><h2>Business verification</h2>
+            <p>Review business documents and record platform decisions.</p><span className="resource-card-link">Manage <span aria-hidden="true">↗</span></span>
+          </Link>
         </ListingGrid>
         <section className="admin-note">
           <h2>Access model</h2>

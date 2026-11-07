@@ -3,6 +3,7 @@ import BusinessMembershipManager from "@/app/components/business-membership-mana
 import { resources } from "@/app/lib/resources";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import OrderManager from "@/app/components/order-manager";
 
 export function generateStaticParams() {
   return resources.map(({ key }) => ({ resource: key }));
@@ -24,5 +25,6 @@ async function ResolvedResourcePage({ params }: ResourcePageProps) {
   const { resource } = await params;
   if (!resources.some((entry) => entry.key === resource)) notFound();
   if (resource === "memberships") return <BusinessMembershipManager />;
+  if (resource === "orders") return <OrderManager />;
   return <ResourceManager resourceKey={resource} />;
 }

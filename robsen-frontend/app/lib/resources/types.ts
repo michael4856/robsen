@@ -12,7 +12,8 @@ export type FieldKind =
   | "role"
   | "status"
   | "navigation"
-  | "permissions";
+  | "permissions"
+  | "checkboxes";
 
 export type FieldDefinition = {
   name: string;

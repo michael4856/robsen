@@ -18,6 +18,8 @@ public final class RoleNavigation {
             "agreements",
             "orders",
             "order-items",
+            "quotation-requests",
+            "supplier-quotations",
             "tenants");
     public static final List<String> DEFAULT_USER = List.of(
             "businesses",
@@ -30,7 +32,9 @@ public final class RoleNavigation {
             "partner-applications",
             "agreements",
             "orders",
-            "order-items");
+            "order-items",
+            "quotation-requests",
+            "supplier-quotations");
     private static final Set<String> ALLOWED = Set.copyOf(ALL);
 
     private RoleNavigation() {

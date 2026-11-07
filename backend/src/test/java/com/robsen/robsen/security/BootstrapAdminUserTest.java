@@ -26,8 +26,8 @@ class BootstrapAdminUserTest {
         UserRepo userRepo = mock(UserRepo.class);
         UserService userService = new UserService(userRepo, new BCryptPasswordEncoder());
         when(userRepo.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.empty());
-        when(userRepo.existsByEmail("admin@example.com")).thenReturn(false);
-        when(userRepo.existsByUsername("admin")).thenReturn(false);
+        when(userRepo.existsByEmailIgnoreCase("admin@example.com")).thenReturn(false);
+        when(userRepo.existsByUsernameIgnoreCase("admin")).thenReturn(false);
         when(userRepo.save(any(User.class))).thenAnswer(invocation -> {
             User savedUser = invocation.getArgument(0);
             savedUser.setId(42L);

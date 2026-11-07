@@ -30,6 +30,11 @@ public class CustomerOrderController {
         return orderService.getAll();
     }
 
+    @GetMapping("/{id}/history")
+    public List<CustomerOrderService.StatusHistoryView> history(@PathVariable Long id) {
+        return orderService.history(id);
+    }
+
     @PutMapping("/{id}")
     public CustomerOrder update(@PathVariable Long id, @RequestBody CustomerOrder order) {
         return orderService.update(id, order);

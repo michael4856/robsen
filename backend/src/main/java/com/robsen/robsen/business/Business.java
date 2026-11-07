@@ -1,6 +1,11 @@
 package com.robsen.robsen.business;
 
 import com.robsen.robsen.common.Status;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -35,4 +40,21 @@ public class Business {
 
     @Column(nullable = false)
     private boolean active = true;
+
+    @jakarta.persistence.Transient
+    @JsonProperty("businessTypes")
+    public List<String> getBusinessTypes() {
+        if (businessType == null || businessType.isBlank()) return List.of();
+        return Arrays.stream(businessType.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .map(value -> value.toUpperCase(Locale.ROOT))
+                .distinct()
+                .toList();
+    }
+
+    @JsonProperty("businessTypes")
+    public void setBusinessTypes(List<String> businessTypes) {
+        this.businessType = BusinessType.normalize(businessTypes).stream().collect(Collectors.joining(","));
+    }
 }

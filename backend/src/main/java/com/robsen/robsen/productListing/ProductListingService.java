@@ -12,6 +12,10 @@ import com.robsen.robsen.product.ProductRepo;
 import com.robsen.robsen.business.BusinessRepo;
 import com.robsen.robsen.business.Business;
 import com.robsen.robsen.common.Status;
+import com.robsen.robsen.stockMovement.StockMovement;
+import com.robsen.robsen.stockMovement.StockMovementRepo;
+import com.robsen.robsen.common.MovementType;
+import com.robsen.robsen.business.MarketplaceVerificationPolicy;
 
 @Service
 public class ProductListingService {
@@ -19,16 +23,22 @@ public class ProductListingService {
     private final BusinessAccessService businessAccess;
     private final ProductRepo productRepo;
     private final BusinessRepo businessRepo;
+    private final StockMovementRepo movementRepo;
+    private final MarketplaceVerificationPolicy verificationPolicy;
 
     public ProductListingService(
             ProductListingRepo listingRepo,
             BusinessAccessService businessAccess,
             ProductRepo productRepo,
-            BusinessRepo businessRepo) {
+            BusinessRepo businessRepo,
+            StockMovementRepo movementRepo,
+            MarketplaceVerificationPolicy verificationPolicy) {
         this.listingRepo = listingRepo;
         this.businessAccess = businessAccess;
         this.productRepo = productRepo;
         this.businessRepo = businessRepo;
+        this.movementRepo = movementRepo;
+        this.verificationPolicy = verificationPolicy;
     }
 
     @Transactional
@@ -36,9 +46,20 @@ public class ProductListingService {
         validateInput(listing);
         listing.setId(null);
         businessAccess.requireAccess(listing.getBusiness().getId(), "product-listings:CREATE");
+        Business owner = businessRepo.findById(listing.getBusiness().getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Business not found."));
+        if (!verificationPolicy.canPublish(owner)) throw new ResponseStatusException(HttpStatus.CONFLICT, "Business verification is required before publishing listings.");
         listing.setProduct(loadActiveProduct(listing.getProduct().getId()));
         listing.setActive(true);
-        return listingRepo.save(listing);
+        ProductListing saved = listingRepo.save(listing);
+        if (saved.getAvailableQuantity() > 0) {
+            StockMovement movement = new StockMovement();
+            movement.setProductListing(saved); movement.setMovementType(MovementType.INITIAL_STOCK);
+            movement.setQuantity(saved.getAvailableQuantity()); movement.setPreviousQuantity(0);
+            movement.setNewQuantity(saved.getAvailableQuantity()); movement.setReason("Initial listing stock");
+            movement.setPerformedByUserId(businessAccess.currentUserId()); movementRepo.save(movement);
+        }
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -71,7 +92,7 @@ public class ProductListingService {
                 .filter(listing -> listing.getProduct() != null && listing.getProduct().isActive())
                 .filter(listing -> businessRepo.findById(listing.getBusiness().getId())
                         .filter(Business::isActive)
-                        .filter(business -> business.getVerificationStatus() == Status.APPROVED)
+                        .filter(verificationPolicy::canPublish)
                         .isPresent())
                 .map(listing -> {
                     var supplier = listing.getBusiness();
@@ -121,13 +142,21 @@ public class ProductListingService {
 
     @Transactional
     public ProductListing update(Long id, ProductListing input) {
-        validateInput(input);
         ProductListing listing = get(id);
         businessAccess.requireAccess(listing.getBusiness().getId(), "product-listings:UPDATE");
-        businessAccess.requireAccess(input.getBusiness().getId(), "product-listings:UPDATE");
-        listing.setBusiness(input.getBusiness());
-        listing.setProduct(loadActiveProduct(input.getProduct().getId()));
-        listing.setAvailableQuantity(input.getAvailableQuantity());
+        if (input.getBusiness() != null && input.getBusiness().getId() != null
+                && !listing.getBusiness().getId().equals(input.getBusiness().getId()))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A listing cannot be transferred to another business.");
+        if (input.getProduct() != null && input.getProduct().getId() != null
+                && !listing.getProduct().getId().equals(input.getProduct().getId()))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A listing product cannot be changed after creation.");
+        if (input.getWholesalePrice() == null || input.getWholesalePrice().signum() < 0
+                || input.getMinimumOrderQuantity() < 1
+                || (input.getReorderLevel() != null && input.getReorderLevel() < 0))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Listing price, minimum order quantity or reorder level is invalid.");
+        Business targetBusiness = listing.getBusiness();
+        if (input.isActive() && !verificationPolicy.canPublish(targetBusiness)) throw new ResponseStatusException(HttpStatus.CONFLICT, "Business verification is required before publishing listings.");
+        // Inventory quantity changes must go through the audited inventory endpoints.
         listing.setMinimumOrderQuantity(input.getMinimumOrderQuantity());
         listing.setWholesalePrice(input.getWholesalePrice());
         listing.setDescription(input.getDescription());
@@ -151,7 +180,8 @@ public class ProductListingService {
         if (listing.getWholesalePrice() == null || listing.getWholesalePrice().signum() < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A valid wholesale price is required.");
         }
-        if (listing.getAvailableQuantity() < 0 || listing.getMinimumOrderQuantity() < 1) {
+        if (listing.getReorderLevel() == null) listing.setReorderLevel(0);
+        if (listing.getAvailableQuantity() < 0 || listing.getReorderLevel() < 0 || listing.getMinimumOrderQuantity() < 1) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Available quantity cannot be negative and minimum order quantity must be positive.");
         }

@@ -16,12 +16,14 @@ export async function apiFetch<T>(
 
   if (!response.ok) {
     const error = (await response.json().catch(() => null)) as
-      | { code?: string; message?: string; error?: string }
+      | { code?: string; message?: string; detail?: string; error?: string }
       | null;
     if (response.status === 401) {
       notifySessionExpired(error?.message ?? undefined);
     }
-    throw new Error(error?.message ?? error?.error ?? `Request failed (${response.status}).`);
+    throw new Error(
+      error?.message ?? error?.detail ?? error?.error ?? `Request failed (${response.status}).`,
+    );
   }
 
   await renewSessionIfDue();
@@ -29,5 +31,20 @@ export async function apiFetch<T>(
   if (response.status === 204) {
     return undefined as T;
   }
+  return (await response.json()) as T;
+}
+
+export async function apiUpload<T>(path: string, body: FormData): Promise<T> {
+  const response = await fetch(`/api/backend/${path.replace(/^\/+/, "")}`, {
+    method: "POST",
+    body,
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const error = (await response.json().catch(() => null)) as { message?: string } | null;
+    if (response.status === 401) notifySessionExpired(error?.message);
+    throw new Error(error?.message ?? `Request failed (${response.status}).`);
+  }
+  await renewSessionIfDue();
   return (await response.json()) as T;
 }

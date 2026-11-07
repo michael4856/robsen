@@ -32,7 +32,10 @@ public class BusinessRolePermissionService implements CommandLineRunner {
             "product-categories:READ", "product-categories:CREATE", "product-categories:UPDATE",
             "products:READ", "products:CREATE", "products:UPDATE",
             "product-listings:READ", "product-listings:CREATE", "product-listings:UPDATE",
-            "orders:READ", "orders:UPDATE", "order-items:READ", "order-items:UPDATE",
+            "orders:READ", "orders:CREATE", "orders:UPDATE",
+            "order-items:READ", "order-items:CREATE", "order-items:UPDATE",
+            "quotation-requests:READ", "quotation-requests:CREATE", "quotation-requests:UPDATE",
+            "supplier-quotations:READ", "supplier-quotations:CREATE", "supplier-quotations:UPDATE",
             "opportunities:READ", "opportunities:CREATE", "opportunities:UPDATE",
             "partner-applications:READ", "partner-applications:UPDATE",
             "agreements:READ", "agreements:CREATE", "agreements:UPDATE",
@@ -217,6 +220,8 @@ public class BusinessRolePermissionService implements CommandLineRunner {
             case "product-categories" -> title(action) + " business product categories.";
             case "product-listings" -> title(action) + " business product listings.";
             case "orders", "order-items" -> title(action) + " wholesale orders.";
+            case "quotation-requests" -> title(action) + " wholesale quotation requests.";
+            case "supplier-quotations" -> title(action) + " supplier quotations.";
             case "opportunities" -> title(action) + " distribution opportunities.";
             case "partner-applications" -> title(action) + " partner applications.";
             case "agreements" -> title(action) + " distribution agreements.";

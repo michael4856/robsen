@@ -3,6 +3,7 @@ package com.robsen.robsen.customerOrder;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.math.BigDecimal;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,9 @@ import com.robsen.robsen.business.BusinessRepo;
 import com.robsen.robsen.common.Status;
 import com.robsen.robsen.orderItem.OrderItemRepo;
 import com.robsen.robsen.productListing.ProductListingRepo;
+import com.robsen.robsen.listingInventory.InventoryService;
+import com.robsen.robsen.business.MarketplaceVerificationPolicy;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
 public class CustomerOrderService {
@@ -22,6 +26,9 @@ public class CustomerOrderService {
     private final BusinessRepo businessRepo;
     private final OrderItemRepo orderItemRepo;
     private final ProductListingRepo listingRepo;
+    private final InventoryService inventory;
+    private final OrderStatusHistoryRepo historyRepo;
+    private final MarketplaceVerificationPolicy verificationPolicy;
 
     public CustomerOrderService(
             CustomerOrderRepo orderRepo,
@@ -29,11 +36,21 @@ public class CustomerOrderService {
             BusinessRepo businessRepo,
             OrderItemRepo orderItemRepo,
             ProductListingRepo listingRepo) {
+        this(orderRepo, businessAccess, businessRepo, orderItemRepo, listingRepo, null, null, null);
+    }
+
+    @Autowired
+    public CustomerOrderService(CustomerOrderRepo orderRepo, BusinessAccessService businessAccess,
+            BusinessRepo businessRepo, OrderItemRepo orderItemRepo, ProductListingRepo listingRepo,
+            InventoryService inventory, OrderStatusHistoryRepo historyRepo, MarketplaceVerificationPolicy verificationPolicy) {
         this.orderRepo = orderRepo;
         this.businessAccess = businessAccess;
         this.businessRepo = businessRepo;
         this.orderItemRepo = orderItemRepo;
         this.listingRepo = listingRepo;
+        this.inventory = inventory;
+        this.historyRepo = historyRepo;
+        this.verificationPolicy = verificationPolicy;
     }
 
     @Transactional
@@ -52,7 +69,7 @@ public class CustomerOrderService {
         Business supplier = businessRepo.findById(supplierId)
                 .filter(Business::isActive)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Active supplier business not found."));
-        if (supplier.getVerificationStatus() != Status.APPROVED) {
+        if (verificationPolicy != null && !verificationPolicy.canAcceptOrders(supplier)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "The supplier business is not approved for wholesale orders.");
         }
         order.setBuyerBusiness(buyer);
@@ -60,10 +77,12 @@ public class CustomerOrderService {
         if (order.getOrderNumber() == null || order.getOrderNumber().isBlank()) {
             order.setOrderNumber("RB-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase());
         }
-        order.setSubtotal(0);
+        order.setSubtotal(BigDecimal.ZERO);
         order.setStatus("PENDING");
         order.setCreatedAt(LocalDateTime.now());
-        return orderRepo.save(order);
+        CustomerOrder saved = orderRepo.save(order);
+        recordStatus(saved, null, "PENDING", "Order placed");
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -92,9 +111,9 @@ public class CustomerOrderService {
         }
         String next = input.getStatus().trim().toUpperCase();
         String current = order.getStatus();
-        boolean supplierAction = List.of("CONFIRMED", "REJECTED", "PROCESSING", "SHIPPED")
+        boolean supplierAction = List.of("CONFIRMED", "REJECTED", "PROCESSING", "READY_FOR_DISPATCH", "SHIPPED")
                 .contains(next);
-        boolean buyerAction = List.of("CANCELLED", "DELIVERED").contains(next);
+        boolean buyerAction = List.of("CANCELLED", "DELIVERED", "COMPLETED").contains(next);
         boolean authorizedActor = supplierAction
                 ? businessAccess.canAccess(order.getSupplierBusiness().getId(), "orders:UPDATE")
                 : buyerAction && businessAccess.canAccess(order.getBuyerBusiness().getId(), "orders:UPDATE");
@@ -105,17 +124,28 @@ public class CustomerOrderService {
         boolean allowed = switch (current) {
             case "PENDING" -> List.of("CONFIRMED", "REJECTED", "CANCELLED").contains(next);
             case "CONFIRMED" -> List.of("PROCESSING", "CANCELLED").contains(next);
-            case "PROCESSING" -> "SHIPPED".equals(next);
+            case "PROCESSING" -> "READY_FOR_DISPATCH".equals(next);
+            case "READY_FOR_DISPATCH" -> "SHIPPED".equals(next);
             case "SHIPPED" -> "DELIVERED".equals(next);
+            case "DELIVERED" -> "COMPLETED".equals(next);
             default -> false;
         };
         if (!allowed) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Order cannot move from " + current + " to " + next + ".");
         }
+        if ("REJECTED".equals(next) && (input.getRejectionReason() == null || input.getRejectionReason().isBlank()))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A rejection reason is required.");
         if (List.of("CANCELLED", "REJECTED").contains(next)) releaseReservedItems(order);
+        if ("DELIVERED".equals(next) && inventory != null) orderItemRepo.findByOrderId(order.getId())
+                .forEach(item -> inventory.fulfillment(item.getProductListing().getId(), item.getQuantity(), order.getId()));
+        String previous = order.getStatus();
         order.setStatus(next);
-        return orderRepo.save(order);
+        if ("REJECTED".equals(next)) order.setRejectionReason(input.getRejectionReason().trim());
+        if (input.getProcessingRemarks() != null) order.setProcessingRemarks(input.getProcessingRemarks());
+        CustomerOrder saved = orderRepo.save(order);
+        recordStatus(saved, previous, next, input.getProcessingRemarks() != null ? input.getProcessingRemarks() : input.getRejectionReason());
+        return saved;
     }
 
     @Transactional
@@ -151,11 +181,31 @@ public class CustomerOrderService {
     }
 
     private void releaseReservedItems(CustomerOrder order) {
-        orderItemRepo.findByOrderId(order.getId()).forEach(item -> listingRepo
-                .findByIdForUpdate(item.getProductListing().getId())
-                .ifPresent(listing -> {
-                    listing.setAvailableQuantity(listing.getAvailableQuantity() + item.getQuantity());
-                    listingRepo.save(listing);
-                }));
+        orderItemRepo.findByOrderId(order.getId()).forEach(item -> {
+            if (inventory != null) inventory.reservation(item.getProductListing().getId(), item.getQuantity(), true,
+                    order.getId(), "Order cancelled or rejected");
+            else listingRepo.findByIdForUpdate(item.getProductListing().getId()).ifPresent(listing -> {
+                listing.setAvailableQuantity(listing.getAvailableQuantity() + item.getQuantity()); listingRepo.save(listing);
+            });
+        });
     }
+
+    @Transactional(readOnly = true)
+    public List<StatusHistoryView> history(Long id) {
+        CustomerOrder order = get(id);
+        if (historyRepo == null) return List.of();
+        return historyRepo.findByOrderIdOrderByCreatedAtAsc(order.getId()).stream()
+                .map(h -> new StatusHistoryView(h.getPreviousStatus(), h.getNewStatus(), h.getChangedByUserId(), h.getRemarks(), h.getCreatedAt()))
+                .toList();
+    }
+
+    private void recordStatus(CustomerOrder order, String previous, String next, String remarks) {
+        if (historyRepo == null) return;
+        OrderStatusHistory history = new OrderStatusHistory(); history.setOrder(order); history.setPreviousStatus(previous);
+        history.setNewStatus(next); history.setChangedByUserId(businessAccess.currentUserId()); history.setRemarks(remarks);
+        historyRepo.save(history);
+    }
+
+    public record StatusHistoryView(String previousStatus, String newStatus, Long changedByUserId,
+            String remarks, LocalDateTime createdAt) {}
 }

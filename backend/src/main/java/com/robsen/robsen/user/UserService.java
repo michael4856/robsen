@@ -71,14 +71,15 @@ public class UserService {
     }
 
     private void ensureUnique(User user, Long excludedId) {
-        boolean emailExists = user.getEmail() != null && (excludedId == null
-                ? userRepo.existsByEmail(user.getEmail())
-                : userRepo.existsByEmailAndIdNot(user.getEmail(), excludedId));
-        boolean usernameExists = user.getUsername() != null && (excludedId == null
-                ? userRepo.existsByUsername(user.getUsername())
-                : userRepo.existsByUsernameAndIdNot(user.getUsername(), excludedId));
-        if (emailExists || usernameExists) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email or username is already registered");
+        if (user.getEmail() != null && (excludedId == null
+                ? userRepo.existsByEmailIgnoreCase(user.getEmail())
+                : userRepo.existsByEmailIgnoreCaseAndIdNot(user.getEmail(), excludedId))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already registered.");
+        }
+        if (user.getUsername() != null && (excludedId == null
+                ? userRepo.existsByUsernameIgnoreCase(user.getUsername())
+                : userRepo.existsByUsernameIgnoreCaseAndIdNot(user.getUsername(), excludedId))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Username is already taken.");
         }
     }
 

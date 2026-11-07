@@ -170,6 +170,93 @@
   gap: 0 12px;
 }
 
+.business-type-options {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #e1e9e3;
+  border-radius: 6px;
+}
+
+.business-type-options legend {
+  padding: 0 5px;
+  color: #4c6057;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.business-type-options > small {
+  display: block;
+  margin-top: 6px;
+  color: #718078;
+}
+
+.location-map-link {
+  display: inline-block;
+  margin-top: 4px;
+  color: var(--green-dark);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.location-map {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 12px;
+}
+
+.location-map-preview-toggle {
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #64746c;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.location-map-preview {
+  display: block;
+  width: min(100%, 480px);
+  height: 220px;
+  margin-top: 8px;
+  border: 1px solid #e1e9e3;
+  border-radius: 6px;
+}
+
+.location-cell {
+  display: inline-flex;
+  flex-direction: column;
+}
+
+.business-branch-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.business-branch-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #e5ece6;
+  border-radius: 8px;
+}
+
+.business-branch-card h3,
+.business-branch-card p {
+  margin: 0 0 6px;
+}
+
 .required-mark {
   color: #bb694f;
 }
@@ -181,4 +268,3 @@
   gap: 9px;
   padding-top: 5px;
 }
-

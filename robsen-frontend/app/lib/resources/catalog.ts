@@ -46,9 +46,9 @@ export const productListingsResource: ResourceDefinition = {
     deleteActionLabel: "Deactivate",
     columns: ["business", "product", "availableQuantity", "wholesalePrice", "active"],
     fields: [
-      { name: "business", label: "Business", kind: "relation", endpoint: "business/all", required: true },
-      { name: "product", label: "Product", kind: "relation", endpoint: "products", required: true },
-      { name: "availableQuantity", label: "Available quantity", kind: "number" },
+      { name: "business", label: "Business", kind: "relation", endpoint: "business/all", required: true, createOnly: true },
+      { name: "product", label: "Product", kind: "relation", endpoint: "products", required: true, createOnly: true },
+      { name: "availableQuantity", label: "Initial available quantity", kind: "number", createOnly: true },
       { name: "minimumOrderQuantity", label: "Minimum order quantity", kind: "number", required: true },
       { name: "wholesalePrice", label: "Wholesale price", kind: "number" },
       { name: "description", label: "Description" },

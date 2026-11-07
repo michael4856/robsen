@@ -12,6 +12,7 @@ import com.robsen.robsen.customerOrder.CustomerOrder;
 import com.robsen.robsen.customerOrder.CustomerOrderRepo;
 import com.robsen.robsen.productListing.ProductListing;
 import com.robsen.robsen.productListing.ProductListingRepo;
+import com.robsen.robsen.listingInventory.InventoryService;
 
 @Service
 public class OrderItemService {
@@ -19,16 +20,19 @@ public class OrderItemService {
     private final CustomerOrderRepo orderRepo;
     private final BusinessAccessService businessAccess;
     private final ProductListingRepo listingRepo;
+    private final InventoryService inventory;
 
     public OrderItemService(
             OrderItemRepo orderItemRepo,
             CustomerOrderRepo orderRepo,
             BusinessAccessService businessAccess,
-            ProductListingRepo listingRepo) {
+            ProductListingRepo listingRepo,
+            InventoryService inventory) {
         this.orderItemRepo = orderItemRepo;
         this.orderRepo = orderRepo;
         this.businessAccess = businessAccess;
         this.listingRepo = listingRepo;
+        this.inventory = inventory;
     }
 
     @Transactional
@@ -42,8 +46,7 @@ public class OrderItemService {
         requireOrderPending(order);
         ProductListing listing = findListingForUpdate(item.getProductListing().getId());
         validateAvailableListing(order, listing, item.getQuantity());
-        listing.setAvailableQuantity(listing.getAvailableQuantity() - item.getQuantity());
-        listingRepo.save(listing);
+        inventory.reservation(listing.getId(), item.getQuantity(), false, order.getId(), "Wholesale order placed");
 
         OrderItem saved = new OrderItem();
         saved.setOrder(order);
@@ -97,8 +100,8 @@ public class OrderItemService {
         if (additional > listing.getAvailableQuantity()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Not enough quantity is available.");
         }
-        listing.setAvailableQuantity(listing.getAvailableQuantity() - additional);
-        listingRepo.save(listing);
+        if (additional > 0) inventory.reservation(listing.getId(), additional, false, item.getOrder().getId(), "Order quantity increased");
+        else if (additional < 0) inventory.reservation(listing.getId(), -additional, true, item.getOrder().getId(), "Order quantity reduced");
         item.setQuantity(input.getQuantity());
         item.setUnitPrice(listing.getWholesalePrice());
         item.setLineTotal(listing.getWholesalePrice().multiply(BigDecimal.valueOf(input.getQuantity())));
@@ -113,8 +116,7 @@ public class OrderItemService {
         requireBuyer(item.getOrder(), "orders:UPDATE");
         requireOrderPending(item.getOrder());
         ProductListing listing = findListingForUpdate(item.getProductListing().getId());
-        listing.setAvailableQuantity(listing.getAvailableQuantity() + item.getQuantity());
-        listingRepo.save(listing);
+        inventory.reservation(listing.getId(), item.getQuantity(), true, item.getOrder().getId(), "Order item removed");
         orderItemRepo.delete(item);
         recalculateSubtotal(item.getOrder());
     }
@@ -180,7 +182,7 @@ public class OrderItemService {
                 .map(OrderItem::getLineTotal)
                 .filter(java.util.Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        order.setSubtotal(subtotal.doubleValue());
+        order.setSubtotal(subtotal);
         orderRepo.save(order);
     }
 }

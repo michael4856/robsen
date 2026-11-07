@@ -6,10 +6,7 @@ export async function GET() {
   const cookieStore = await cookies();
   const token = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
   if (!token) {
-    return Response.json(
-      { code: "AUTH_REQUIRED", message: "Sign in to continue." },
-      { status: 401 },
-    );
+    return new Response(null, { status: 204 });
   }
 
   const response = await forwardBackendResponse("/api/auth/me", {

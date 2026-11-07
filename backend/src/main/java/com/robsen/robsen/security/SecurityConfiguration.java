@@ -81,7 +81,7 @@ public class SecurityConfiguration {
                                 "/api/business/marketplace",
                                 "/api/product-listings/marketplace",
                                 "/api/distribution-opportunities/marketplace")
-                        .authenticated()
+                        .permitAll()
                         .requestMatchers(
                                 HttpMethod.POST, "/api/business-memberships/invitations/*/accept")
                         .authenticated()
@@ -116,6 +116,13 @@ public class SecurityConfiguration {
     }
 
     private String resourceFor(String path) {
+        if (path.startsWith("/api/business-verifications")) return "memberships";
+        if (path.matches("/api/business/\\d+/branches(?:/\\d+)?")) return "memberships";
+        if (path.startsWith("/api/inventory") || path.startsWith("/api/stock-movements")) return "product-listings";
+        if (path.matches("/api/quotation-requests/\\d+/(publish|accept)")) return "memberships";
+        if (path.matches("/api/quotation-requests/\\d+/quotations(?:/.*)?")) return "supplier-quotations";
+        if (path.startsWith("/api/quotation-requests")) return "quotation-requests";
+        if (path.startsWith("/api/supplier-quotations")) return "supplier-quotations";
         if (path.equals("/api/product-listings/marketplace")
                 || path.equals("/api/distribution-opportunities/marketplace")) return "memberships";
         if (path.equals("/api/business/my")) return "memberships";

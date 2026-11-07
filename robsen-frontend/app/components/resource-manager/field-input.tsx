@@ -7,6 +7,7 @@ import { DROPDOWN_SOURCES, loadDropdownOptions } from "./dropdown-options";
 import { isNamedRoleList } from "./record-utils";
 import { humanize } from "./format";
 import type { DropdownOption, FormValue } from "./types";
+import LocationMapLink, { isLocationField } from "../location-map-link";
 
 export function FieldInput({
   field,
@@ -109,6 +110,31 @@ export function FieldInput({
     return <PermissionInput field={field} onChange={onChange} value={value} />;
   }
 
+  if (kind === "checkboxes") {
+    const selected = Array.isArray(value) ? value : [];
+    return (
+      <fieldset className="navigation-permissions">
+        <legend>{field.label}{field.required ? <span className="required-mark"> *</span> : null}</legend>
+        <div className="navigation-permission-options">
+          {(field.options ?? []).map((option) => (
+            <label className="field-checkbox" key={option}>
+              <input
+                checked={selected.includes(option)}
+                onChange={(event) => onChange(
+                  event.target.checked
+                    ? [...selected, option]
+                    : selected.filter((item) => item !== option),
+                )}
+                type="checkbox"
+              />
+              <span>{humanize(option)}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+    );
+  }
+
   // Any kind registered in DROPDOWN_SOURCES renders as an async <select>.
   if (DROPDOWN_SOURCES[kind]) {
     return <AsyncSelectInput field={field} kind={kind} onChange={onChange} value={value} />;
@@ -136,13 +162,14 @@ export function FieldInput({
   }
 
   return (
-    <label className="field-control">
-      <span>
+    <div className="field-control">
+      <label htmlFor={`${field.name}-input`}>
         {field.label}
         {field.required ? <span className="required-mark"> *</span> : null}
-      </span>
+      </label>
       {kind === "enum" ? (
         <select
+          id={`${field.name}-input`}
           name={field.name}
           onChange={(event) => onChange(event.target.value)}
           required={field.required}
@@ -161,6 +188,7 @@ export function FieldInput({
       ) : (
         <input
           autoComplete={kind === "password" ? "new-password" : undefined}
+          id={`${field.name}-input`}
           name={field.name}
           onChange={(event) => onChange(event.target.value)}
           required={field.required}
@@ -169,7 +197,10 @@ export function FieldInput({
           value={String(value)}
         />
       )}
-    </label>
+      {isLocationField(field.name) && String(value ?? "").trim() ? (
+        <LocationMapLink location={String(value)} />
+      ) : null}
+    </div>
   );
 }
 
@@ -494,4 +525,3 @@ function PermissionInput({
     </fieldset>
   );
 }
-
